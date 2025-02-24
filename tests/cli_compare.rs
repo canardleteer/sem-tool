@@ -13,6 +13,8 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 use assert_cmd::Command;
+use proptest::prelude::*;
+use proptest_semver::*;
 
 mod common;
 use common::subcommands::*;
@@ -149,4 +151,34 @@ fn cli_compare_basic_cases() {
             "semantic equivalence passing without complex exit code reporting",
         )
         .success();
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        // Setting both fork and timeout is redundant since timeout implies
+        // fork, but both are shown for clarity.
+        fork: true,
+        // timeout: 10000,
+        cases: 256,
+        .. ProptestConfig::default()
+    })]
+    #[test]
+    fn filter_test_semantic_equal(a in arb_version(), b in arb_version()) {
+        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+        let assert = cmd.arg(COMMAND_COMPARE).arg("-s").arg(a.to_string()).arg(b.to_string()).assert();
+        assert.append_context(COMMAND_COMPARE, "property test: -s").success();
+
+        // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.
+    }
+
+    #[test]
+    fn filter_test_compare_no_opts(version_a in arb_version(), version_b in arb_version()) {
+        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+        let assert = cmd.arg(COMMAND_COMPARE).arg("-s").arg(version_a.to_string()).arg(version_b.to_string()).assert();
+        assert.append_context(COMMAND_COMPARE, "property test").success();
+
+        // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.
+    }
+
+    // NOTE(canardleteer): A more robust test case here, would be for "-s" & "-se"
 }

@@ -13,6 +13,8 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 use assert_cmd::Command;
+use proptest::prelude::*;
+use proptest_semver::*;
 
 mod common;
 use common::subcommands::*;
@@ -45,4 +47,28 @@ fn cli_validate_basic_cases() {
             "regression of: https://github.com/canardleteer/sem-tool/issues/50",
         )
         .failure();
+}
+
+proptest! {
+    #![proptest_config(ProptestConfig {
+        // Setting both fork and timeout is redundant since timeout implies
+        // fork, but both are shown for clarity.
+        fork: true,
+        // timeout: 10000,
+        cases: 256,
+        .. ProptestConfig::default()
+    })]
+    #[test]
+    fn prop_validate_small(v in arb_version()) {
+        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+        let assert = cmd.arg(COMMAND_VALIDATE).arg("-s").arg(v.to_string()).assert();
+        assert.append_context(COMMAND_VALIDATE, "property testing").success();
+    }
+
+    #[test]
+    fn prop_validate_regex(v in arb_semver()) {
+        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+        let assert = cmd.arg(COMMAND_VALIDATE).arg(v).assert();
+        assert.append_context(COMMAND_VALIDATE, "property testing").success();
+    }
 }

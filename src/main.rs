@@ -66,6 +66,9 @@ pub enum Commands {
     /// "A is {Greater,Equals,Less} {to,than} B", with both Semantic results
     /// (meaningful results under Semantic Versioning), as well as Lexical
     /// results (meaningless, but handy for sorting text lists).
+    ///
+    /// Without enabling `--set_exit_status`, the exit status is generally
+    /// meaningless, other than confirming that the arguments were valid.
     Compare {
         /// If you want some slightly complex exit status codes for this dual
         /// compare, you can turn them on with this flag.
@@ -333,6 +336,7 @@ fn compare(a: &Version, b: &Version) -> ComparisonStatement {
 fn explain(v: &Version) -> VersionExplanation {
     VersionExplanation::from(v)
 }
+
 fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
     FilterTestResult::filter_test(filter, semantic_version)
 }
@@ -344,4 +348,69 @@ fn validate(semantic_version: String, small: bool) -> ValidateResult {
 
 fn generate(small: bool, count: usize) -> GenerateResult {
     GenerateResult::new(small, count)
+}
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+    use proptest_semver::*;
+
+    use crate::{SerializableOrdering, version_without_build_metadata};
+
+    proptest! {
+        //                 None of these tests do much more than ensure the
+        //                 application doesn't bounce back or crash on valid
+        //                 input.
+        #[test]
+        fn compare(a in arb_version(), b in arb_version()) {
+            let comparison = super::compare(&a, &b);
+
+            let a_no_build = version_without_build_metadata(&a);
+            let b_no_build = version_without_build_metadata(&b);
+
+            match a.cmp(&b) {
+                std::cmp::Ordering::Equal => {
+                    prop_assert_eq!(a_no_build, b_no_build);
+                    prop_assert!(comparison.semantic_ordering() == &SerializableOrdering::Equal);
+                },
+                std::cmp::Ordering::Greater => {
+                    prop_assert!(comparison.lexical_ordering() == &SerializableOrdering::Greater || comparison.lexical_ordering() == &SerializableOrdering::Equal);
+                    prop_assert_eq!(comparison.semantic_ordering(), &SerializableOrdering::Greater);
+                },
+                std::cmp::Ordering::Less => {
+                    prop_assert!(comparison.lexical_ordering() == &SerializableOrdering::Less || comparison.lexical_ordering() == &SerializableOrdering::Equal);
+                    prop_assert_eq!(comparison.semantic_ordering(), &SerializableOrdering::Less);
+                },
+
+            };
+        }
+
+        #[test]
+        fn explain(version in arb_version()) {
+            super::explain(&version);
+        }
+
+        #[test]
+        fn validate(version in arb_semver(), small: bool) {
+            super::validate(version, small);
+        }
+
+        #[test]
+        fn filter_test(filter in arb_version_req(MAX_COMPARATORS_IN_VERSION_REQ_STRING), version in arb_version()) {
+            super::filter_test(&filter, &version);
+        }
+
+        #[test]
+        fn sort(versions in arb_vec_versions(256), filter in arb_optional_version_req(0.5, MAX_COMPARATORS_IN_VERSION_REQ_STRING), lexical_sorting in any::<bool>(), reverse in any::<bool>()) {
+            let mut versions = versions.clone();
+            super::sort(&mut versions, &filter, lexical_sorting, reverse);
+        }
+
+        #[test]
+        fn generate(small: bool, count: u8) {
+            // Not going to flex maxing out memory allocations here, limiting
+            // to u8 testing.
+            super::generate(small, count.into());
+        }
+    }
 }
