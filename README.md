@@ -361,6 +361,7 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
 
 ## Todo
 
+- [ ] Simple `validate` command.
 - [ ] Possibly remove "text" output, or just make it really nice.
 - [ ] Additional language filter implementations
   - [ ] This is somewhat of a slippery slope.
