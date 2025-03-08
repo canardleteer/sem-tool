@@ -285,11 +285,11 @@ impl OrderedVersionMap {
         }
 
         // Generally sort the input for keys into the IndexMap.
-        versions.sort();
-
         // Reverse the ordering, if appropriate.
         if reverse {
-            versions.reverse()
+            versions.sort_by(|a, b| b.cmp(a));
+        } else {
+            versions.sort();
         }
 
         // Create our return structure.
@@ -314,9 +314,10 @@ impl OrderedVersionMap {
         // For each key, sort each list of versions in an appropriate order.
         for (_, v) in ordered_version_map.iter_mut() {
             if lexical_sorting {
-                v.sort();
                 if reverse {
-                    v.reverse();
+                    v.sort_by(|a, b| b.cmp(a));
+                } else {
+                    v.sort();
                 }
             } else {
                 v.shuffle(&mut rand::rng());
