@@ -542,7 +542,7 @@ mod tests {
     // Tests some simple static tests.
     #[test]
     fn test_ordered_version_map() {
-        let mut scaffold1 = vec!["99.0.0", "100.0.0", "0.0.1"]
+        let mut scaffold1 = ["99.0.0", "100.0.0", "0.0.1"]
             .iter()
             .map(|v| Version::parse(v).unwrap())
             .collect();
@@ -582,7 +582,7 @@ mod tests {
         .collect();
 
         let test = OrderedVersionMap::new(&mut scaffold2, &None, false, false);
-        let test_keys: Vec<Version> = test.inner.keys().map(|v| v.clone()).collect();
+        let test_keys: Vec<Version> = test.inner.keys().cloned().collect();
         assert!(test_keys.len() == 12);
         println!("{}", test_keys[0]);
         assert!(test_keys[0] == Version::parse("0.0.0-alpha.0").unwrap());
@@ -591,7 +591,7 @@ mod tests {
 
         // Reverse of above test.
         let test = OrderedVersionMap::new(&mut scaffold2, &None, false, true);
-        let test_keys: Vec<Version> = test.inner.keys().map(|v| v.clone()).collect();
+        let test_keys: Vec<Version> = test.inner.keys().cloned().collect();
         assert!(test_keys.len() == 12);
         println!("{}", test_keys[0]);
         assert!(test_keys[test_keys.len() - 1] == Version::parse("0.0.0-alpha.0").unwrap());
@@ -605,7 +605,7 @@ mod tests {
             false,
             false,
         );
-        let test_keys: Vec<Version> = test.inner.keys().map(|v| v.clone()).collect();
+        let test_keys: Vec<Version> = test.inner.keys().cloned().collect();
         assert!(test_keys.len() == 5);
         println!("{}", test_keys[0]);
         assert!(test_keys[0] == Version::parse("0.0.1").unwrap());
@@ -702,21 +702,21 @@ mod tests {
             &VersionReq::parse(">1").unwrap(),
             &Version::parse("0.0.0").unwrap(),
         );
-        assert_eq!(test.pass, false);
+        assert!(!test.pass);
         assert_eq!(test.report(), ExitCode::FAILURE);
 
         let test = FilterTestResult::filter_test(
             &VersionReq::parse(">1").unwrap(),
             &Version::parse("2.0.0").unwrap(),
         );
-        assert_eq!(test.pass, true);
+        assert!(test.pass);
         assert_eq!(test.report(), ExitCode::SUCCESS);
 
         let test = FilterTestResult::filter_test(
             &VersionReq::parse(">=1").unwrap(),
             &Version::parse("1.0.0").unwrap(),
         );
-        assert_eq!(test.pass, true);
+        assert!(test.pass);
         assert_eq!(test.report(), ExitCode::SUCCESS);
 
         // Display Coverage

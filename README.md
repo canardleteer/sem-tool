@@ -352,7 +352,8 @@ $ sem-tool -o text generate 2
 # ... 2 potentially very long strings .... 
 
 $ sem-tool -o text generate -s 2
-# ... 2 potentially very long strings, but with MAJOR.MINOR.PATCH components all under u64::MAX .... 
+# ... 2 potentially very long strings, but with MAJOR.MINOR.PATCH components
+# all under u64::MAX .... 
 
 # Dogfooding example.
 $ sem-tool -o text generate -s 1000 | sem-tool sort
@@ -360,16 +361,11 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
 
 ## Todo
 
-- [X] Need status code responses options
-- [X] potential ambiguity
-- [X] regex validate
 - [ ] Possibly remove "text" output, or just make it really nice.
 - [ ] Additional language filter implementations
-- [X] Generate random semantic version lists for helping build tests
-- [X] Github Actions + release-plz
+  - [ ] This is somewhat of a slippery slope.
+  - [ ] Consider if we should seek to use pure regex filtering.
 - [ ] Commands that take stdin, should probably take file inputs too.
-- [ ] Property testing
-  - [X] There is work on [this branch](https://github.com/canardleteer/sem-tool/tree/proptest), but it needs a reorg.
 - [ ] CLI Testing (probably) with `assert_cmd`
   - [X] all subcommands
   - [ ] make these far more robust
@@ -379,6 +375,15 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
     - [ ] basic
     - [ ] output snapshotting of all types
     - [ ] output snapshotting with good labels
+- [ ] Property testing
+  - [X] There is work on [this
+    branch](https://github.com/canardleteer/sem-tool/tree/proptest), but it
+    needs a reorg after the CLI Testing lands in a more composable form.
 - [ ] Unit Testing
   - [ ] Validate output
+- [X] Need status code responses options
+- [X] Potential Ambiguity
+- [X] Regex Validate
+- [X] Generate random semantic version lists for helping build tests
+- [X] Github Actions + release-plz
   
