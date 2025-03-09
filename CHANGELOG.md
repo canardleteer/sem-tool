@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8](https://github.com/canardleteer/sem-tool/compare/v0.1.7...v0.1.8) - 2025-03-09
+
+### Added
+
+- replace regex_generate with rand_regex
+- reduce binary size
+
+### Fixed
+
+- don't print empty optional data in explain
+- misc typos
+
+### Other
+
+- remove stray comment
+- update insta tests
+- sort ordered versions exactly once
+- reduce magic subcommands
+- typos
+- reduce cli test scaffolding + clippy
+- note on where to further reduce dependency size
+- remove magic command name from CLI tests
+- license pass
+- update dependencies
+
 ## [0.1.7](https://github.com/canardleteer/sem-tool/compare/v0.1.6...v0.1.7) - 2025-03-07
 
 ### Added
