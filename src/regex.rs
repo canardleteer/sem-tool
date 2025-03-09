@@ -53,7 +53,6 @@ pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
 ///
 /// This could probably be done better.
 pub(crate) fn generate_u64_safe_semver(count: usize) -> Vec<String> {
-    // type RandomStringRegexIter = rand::distr::Iter<rand_regex::Regex, rand::prelude::ThreadRng, impl rand::distr::Distribution<Result<std::string::String, FromUtf8Error>> for rand_regex::Regex>;
     type RandomStringRegexIter = rand::distr::Iter<
         rand_regex::Regex,
         rand::prelude::ThreadRng,
