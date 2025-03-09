@@ -73,12 +73,12 @@ impl Termination for ApplicationTermination {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum ApplicationOutput {
-    /// Asseration by this program
+    /// Assertion by this program
     ComparisonStatement(results::ComparisonStatement),
     /// Ordered Map representation of versions
     OrderedVersionMap(results::OrderedVersionMap),
     /// Breakdown of version
-    VersionExplaination(results::VersionExplanation),
+    VersionExplanation(results::VersionExplanation),
     /// Flat list of versions
     FlatVersionsList(results::FlatVersionsList),
     /// Flat list of strings
@@ -102,7 +102,7 @@ impl From<results::OrderedVersionMap> for ApplicationOutput {
 }
 impl From<results::VersionExplanation> for ApplicationOutput {
     fn from(value: results::VersionExplanation) -> Self {
-        ApplicationOutput::VersionExplaination(value)
+        ApplicationOutput::VersionExplanation(value)
     }
 }
 
@@ -157,7 +157,7 @@ impl fmt::Display for ApplicationOutput {
             ApplicationOutput::OrderedVersionMap(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::VersionExplaination(v) => {
+            ApplicationOutput::VersionExplanation(v) => {
                 write!(f, "{}", v)
             }
             ApplicationOutput::FlatVersionsList(v) => {
