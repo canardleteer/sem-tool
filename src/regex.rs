@@ -14,7 +14,7 @@
 //! limitations under the License.
 use std::string::FromUtf8Error;
 
-use rand::{distr::Distribution, Rng};
+use rand::{Rng, distr::Distribution};
 use semver::{BuildMetadata, Prerelease};
 
 /// Regex for Semantic Version 2.0.0, directly from the spec, with 2 changes:

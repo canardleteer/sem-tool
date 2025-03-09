@@ -15,7 +15,7 @@
 [package]
 name = "sem-tool"
 version = "0.1.8"
-edition = "2021"
+edition = "2024"
 exclude = [
     "example-data/*",
 ]
