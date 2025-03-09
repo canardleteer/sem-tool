@@ -372,7 +372,7 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
   - [ ] restructure or add a framework to make them more legible & composable
   - [ ] validate all output types
   - [ ] output snapshotting
-    - [ ] basic
+    - [X] basic
     - [ ] output snapshotting of all types
     - [ ] output snapshotting with good labels
 - [ ] Property testing

@@ -12,20 +12,9 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
-//!
-//! This is a bunch of last mile display + serialization logic.
-//!
-//! NOTE(canardleteer): I just lifted these regexes from the [proptest-semver]
-//!                     crate, because I don't want to pull in the full
-//!                     dependencies.
-//!
-//! NOTE(canardleteer): Moving to all [rand] `0.9` would be nice, just borrowing
-//!                     from the regex_generate example here.
+use std::string::FromUtf8Error;
 
-extern crate rand_old;
-extern crate regex_generate;
-use rand_old::{thread_rng, Rng};
-use regex_generate::{Generator, DEFAULT_MAX_REPEAT};
+use rand::{distr::Distribution, Rng};
 use semver::{BuildMetadata, Prerelease};
 
 /// Regex for Semantic Version 2.0.0, directly from the spec, with 2 changes:
@@ -41,17 +30,22 @@ pub const ALWAYS_PRERELEASE_REGEX: &str = r"(?-u:(?:((?:0|[1-9]\d*|\d*[a-zA-Z-][
 /// Regex to build a Build Metadata string, always, without the prefix `+`.
 pub const ALWAYS_BUILD_METADATA_REGEX: &str = r"(?-u:(?:([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)))";
 
+/// Generally the "maximum limit on repetitions" allowed for the regex string
+/// generator, to prevent automata making overly useless decisions for the
+/// purposes of this tool.
+///
+/// See [rand_regex::Regex] for more information.
+pub(crate) const DEFAULT_MAX_REPEAT: u32 = 100;
+
 /// Generate [Vec<String>] filled with valid Semantic Versions.
 pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
-    let mut semver = Generator::new(SEMVER_REGEX, thread_rng(), DEFAULT_MAX_REPEAT).unwrap();
+    let mut rng = rand::rng();
+    let semver = rand_regex::Regex::compile(SEMVER_REGEX, DEFAULT_MAX_REPEAT).unwrap();
 
-    let mut v = Vec::with_capacity(count);
-    for _i in 0..count {
-        let mut buffer = vec![];
-        semver.generate(&mut buffer).unwrap();
-        v.push(String::from_utf8(buffer).unwrap())
-    }
-    v
+    (&mut rng)
+        .sample_iter(&semver)
+        .take(count)
+        .collect::<Vec<String>>()
 }
 
 /// Generate [Vec<String>] filled with valid Semantic Versions bound by [u64::MAX]
@@ -59,49 +53,44 @@ pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
 ///
 /// This could probably be done better.
 pub(crate) fn generate_u64_safe_semver(count: usize) -> Vec<String> {
-    let mut pre_release_gen =
-        Generator::new(ALWAYS_PRERELEASE_REGEX, thread_rng(), DEFAULT_MAX_REPEAT).unwrap();
-    let mut build_metadata_gen = Generator::new(
-        ALWAYS_BUILD_METADATA_REGEX,
-        thread_rng(),
-        DEFAULT_MAX_REPEAT,
-    )
-    .unwrap();
+    // type RandomStringRegexIter = rand::distr::Iter<rand_regex::Regex, rand::prelude::ThreadRng, impl rand::distr::Distribution<Result<std::string::String, FromUtf8Error>> for rand_regex::Regex>;
+    type RandomStringRegexIter = rand::distr::Iter<
+        rand_regex::Regex,
+        rand::prelude::ThreadRng,
+        Result<std::string::String, FromUtf8Error>,
+    >;
 
-    let mut v = Vec::with_capacity(count);
-    for _i in 0..count {
-        let pre: Option<Prerelease> = match thread_rng().gen_bool(0.5) {
-            true => {
-                let mut buffer = vec![];
-                pre_release_gen.generate(&mut buffer).unwrap();
-                Some(Prerelease::new(&String::from_utf8(buffer).unwrap()).unwrap())
-            }
-            false => None,
-        };
+    let mut rng = rand::rng();
 
-        let build: Option<BuildMetadata> = match thread_rng().gen_bool(0.5) {
-            true => {
-                let mut buffer = vec![];
-                build_metadata_gen.generate(&mut buffer).unwrap();
-                Some(BuildMetadata::new(&String::from_utf8(buffer).unwrap()).unwrap())
-            }
-            false => None,
-        };
+    let pre_release_gen: RandomStringRegexIter =
+        rand_regex::Regex::compile(ALWAYS_PRERELEASE_REGEX, DEFAULT_MAX_REPEAT)
+            .unwrap()
+            .sample_iter(rand::rng());
+    let build_metadata_gen: RandomStringRegexIter =
+        rand_regex::Regex::compile(ALWAYS_BUILD_METADATA_REGEX, DEFAULT_MAX_REPEAT)
+            .unwrap()
+            .sample_iter(rand::rng());
 
-        let mut s = format!(
-            "{}.{}.{}",
-            thread_rng().gen::<u64>(),
-            thread_rng().gen::<u64>(),
-            thread_rng().gen::<u64>()
-        );
-        if let Some(pre) = pre {
-            s = format!("{s}-{}", pre);
-        }
-        if let Some(build) = build {
-            s = format!("{s}+{}", build);
-        }
-
-        v.push(s)
-    }
-    v
+    // Because our regexes exclude UTF-8 and are "to form", we feel confident in
+    // unwrapping here.
+    pre_release_gen
+        .zip(build_metadata_gen)
+        .map(|(pr, bm)| {
+            format!(
+                "{}.{}.{}{}{}",
+                rng.random::<u64>(),
+                rng.random::<u64>(),
+                rng.random::<u64>(),
+                match rng.random_bool(0.5) {
+                    true => format!("-{}", Prerelease::new(&pr.unwrap()).unwrap()),
+                    _ => "".to_string(),
+                },
+                match rng.random_bool(0.5) {
+                    true => format!("+{}", BuildMetadata::new(&bm.unwrap()).unwrap()),
+                    _ => "".to_string(),
+                }
+            )
+        })
+        .take(count)
+        .collect::<Vec<String>>()
 }

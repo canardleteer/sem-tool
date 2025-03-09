@@ -41,16 +41,7 @@ clap_derive = "4.5.28"
 indexmap = { version = "2.7.1", features= ["serde"] }
 semver = { version = "1.0.25", features= ["serde"] }
 thiserror = "2.0.11"
-
-# NOTE(canardleteer): `regex_generate` requires an older `rand`, and I think
-#                     that's fine for now. It does add a significant amount of
-#                     size to the binary however (1MB), that we should seek to
-#                     reduce.
-#
-#                     Both are currently required for `sem-tool generate`, but
-#                     the right place to fix this, is inside `regex_generate`.
-regex_generate = "0.2.3"
-rand_old = { version = "0.8.5", package = "rand" }
+rand_regex = "0.18.0"
 
 # NOTE(canardleteer): The inclusion of default `regex` added 3MB to the release
 #                     binary, and that left somewhat of a sour taste in my
