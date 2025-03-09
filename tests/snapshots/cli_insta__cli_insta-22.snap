@@ -3,15 +3,15 @@ source: tests/cli_insta.rs
 info:
   program: sem-tool
   args:
-    - compare
-    - 1.2.3
-    - 4.5.6
+    - explain
+    - 0.1.2
 ---
 success: true
 exit_code: 0
 ----- stdout -----
 ---
-semantic_ordering: Less
-lexical_ordering: Less
+major: 0
+minor: 1
+patch: 2
 
 ----- stderr -----

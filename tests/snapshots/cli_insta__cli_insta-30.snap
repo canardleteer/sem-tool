@@ -4,15 +4,15 @@ info:
   program: sem-tool
   args:
     - compare
-    - "-s"
-    - 1.2.4+0
+    - "-e"
+    - 1.2.3+0
     - 1.2.3+1
 ---
-success: true
-exit_code: 0
+success: false
+exit_code: 110
 ----- stdout -----
 ---
-semantic_ordering: Greater
-lexical_ordering: Greater
+semantic_ordering: Equal
+lexical_ordering: Less
 
 ----- stderr -----
