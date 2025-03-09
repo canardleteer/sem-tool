@@ -107,7 +107,7 @@ impl fmt::Display for FilterTestResult {
     }
 }
 
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub(crate) enum SegmentType {
     Numeric,
     Ascii,
@@ -125,7 +125,7 @@ impl fmt::Display for SegmentType {
 /// Describes a dot separated segment of either a Pre-Release, or Build Metadata string.
 ///
 /// Kind describes how the value is meant to be interpreted for precedence.
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub(crate) struct PreMetaSegment {
     kind: SegmentType,
     value: String,
@@ -158,39 +158,63 @@ impl From<&str> for PreMetaSegment {
 }
 
 /// Descriptive information about a Version.
-#[derive(Serialize, PartialEq)]
+#[derive(Clone, Serialize, PartialEq)]
 pub(crate) struct VersionExplanation {
     major: u64,
     minor: u64,
     patch: u64,
-    prerelease_string: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prerelease_string: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename(serialize = "prerelease"))]
-    prerelease: Vec<PreMetaSegment>,
-    build_metadata_string: String,
+    prerelease: Option<Vec<PreMetaSegment>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    build_metadata_string: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename(serialize = "build-metadata"))]
-    build_metadata: Vec<PreMetaSegment>,
+    build_metadata: Option<Vec<PreMetaSegment>>,
 }
 
 impl From<&Version> for VersionExplanation {
     fn from(value: &Version) -> Self {
+        let prerelease_string = value.pre.as_str();
+        let (prerelease_string, prerelease) = if prerelease_string.is_empty() {
+            (None, None)
+        } else {
+            (
+                Some(prerelease_string.to_string()),
+                Some(
+                    prerelease_string
+                        .split('.')
+                        .map(PreMetaSegment::from)
+                        .collect(),
+                ),
+            )
+        };
+
+        let build_metadata_string = value.build.as_str();
+        let (build_metadata_string, build_metadata) = if build_metadata_string.is_empty() {
+            (None, None)
+        } else {
+            (
+                Some(build_metadata_string.to_string()),
+                Some(
+                    build_metadata_string
+                        .split('.')
+                        .map(PreMetaSegment::from)
+                        .collect(),
+                ),
+            )
+        };
+
         Self {
             major: value.major,
             minor: value.minor,
             patch: value.patch,
-            prerelease: value
-                .pre
-                .as_str()
-                .split('.')
-                .map(PreMetaSegment::from)
-                .collect(),
-            prerelease_string: value.pre.to_string(),
-            build_metadata: value
-                .build
-                .as_str()
-                .split('.')
-                .map(PreMetaSegment::from)
-                .collect(),
-            build_metadata_string: value.build.to_string(),
+            prerelease,
+            prerelease_string,
+            build_metadata,
+            build_metadata_string,
         }
     }
 }
@@ -200,14 +224,19 @@ impl fmt::Display for VersionExplanation {
         writeln!(f, "Major: {}", self.major)?;
         writeln!(f, "Minor: {}", self.minor)?;
         writeln!(f, "Patch: {}", self.patch)?;
-        writeln!(f, "PreRelease: {}", self.prerelease_string)?;
-        for i in self.prerelease.iter() {
-            writeln!(f, "- {i}")?;
+        if let (Some(pr_str), Some(pr)) = (&self.prerelease_string, &self.prerelease) {
+            writeln!(f, "PreRelease: {}", pr_str)?;
+            for i in pr.iter() {
+                writeln!(f, "- {i}")?;
+            }
         }
-        writeln!(f, "Build Metadata: {}", self.build_metadata_string)?;
-        for i in self.build_metadata.iter() {
-            writeln!(f, "- {i}")?;
+        if let (Some(bm_str), Some(bm)) = (&self.build_metadata_string, &self.build_metadata) {
+            writeln!(f, "Build Metadata: {}", bm_str)?;
+            for i in bm.iter() {
+                writeln!(f, "- {i}")?;
+            }
         }
+
         Ok(())
     }
 }
@@ -678,19 +707,23 @@ mod tests {
         assert!(test.minor == 0);
         assert!(test.patch == 0);
 
-        assert!(test.prerelease.len() == 5);
-        assert!(test.prerelease[1].kind == SegmentType::Ascii);
-        assert!(test.prerelease[1].value == "a");
-        assert!(test.prerelease[test.prerelease.len() - 1].kind == SegmentType::Numeric);
-        assert!(test.prerelease[test.prerelease.len() - 1].value == "4");
-        assert!(test.prerelease_string == "0.a.b.c.4");
+        assert!(test.prerelease.is_some());
+        let test_prerelease = test.prerelease.as_ref().unwrap();
+        assert!(test_prerelease.len() == 5);
+        assert!(test_prerelease[1].kind == SegmentType::Ascii);
+        assert!(test_prerelease[1].value == "a");
+        assert!(test_prerelease[test_prerelease.len() - 1].kind == SegmentType::Numeric);
+        assert!(test_prerelease[test_prerelease.len() - 1].value == "4");
+        assert!(test.prerelease_string.as_ref().unwrap() == "0.a.b.c.4");
 
-        assert!(test.build_metadata.len() == 5);
-        assert!(test.build_metadata[1].kind == SegmentType::Ascii);
-        assert!(test.build_metadata[1].value == "-1");
-        assert!(test.build_metadata[test.build_metadata.len() - 1].kind == SegmentType::Numeric);
-        assert!(test.build_metadata[test.build_metadata.len() - 1].value == "3");
-        assert!(test.build_metadata_string == "0.-1.a.b0.3");
+        assert!(test.build_metadata.is_some());
+        let test_build_metadata = test.build_metadata.as_ref().unwrap();
+        assert!(test_build_metadata.len() == 5);
+        assert!(test_build_metadata[1].kind == SegmentType::Ascii);
+        assert!(test_build_metadata[1].value == "-1");
+        assert!(test_build_metadata[test_build_metadata.len() - 1].kind == SegmentType::Numeric);
+        assert!(test_build_metadata[test_build_metadata.len() - 1].value == "3");
+        assert!(test.build_metadata_string.as_ref().unwrap() == "0.-1.a.b0.3");
 
         // Display Coverage
         let _ = format!("{}", test);
