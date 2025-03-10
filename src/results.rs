@@ -35,7 +35,7 @@ pub(crate) struct ValidateResult {
 }
 
 impl ValidateResult {
-    pub(crate) fn validate(semantic_version: String, small: bool) -> ValidateResult {
+    pub(crate) fn validate(semantic_version: String, small: bool) -> Self {
         let pass = if small {
             Version::parse(&semantic_version).is_ok()
         } else {
@@ -45,7 +45,7 @@ impl ValidateResult {
                 .is_match(&semantic_version)
         };
 
-        ValidateResult { valid: pass }
+        Self { valid: pass }
     }
 }
 
