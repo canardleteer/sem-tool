@@ -52,11 +52,11 @@ pub(crate) enum ApplicationTermination {
 }
 
 impl ApplicationTermination {
-    pub(crate) fn new(output: ApplicationOutput, hard_success: bool) -> ApplicationTermination {
+    pub(crate) const fn new(output: ApplicationOutput, hard_success: bool) -> Self {
         if hard_success {
-            ApplicationTermination::AlwaysSuccessful(output)
+            Self::AlwaysSuccessful(output)
         } else {
-            ApplicationTermination::Normal(output)
+            Self::Normal(output)
         }
     }
 }
@@ -64,8 +64,8 @@ impl ApplicationTermination {
 impl Termination for ApplicationTermination {
     fn report(self) -> ExitCode {
         match self {
-            ApplicationTermination::Normal(application_output) => application_output.report(),
-            ApplicationTermination::AlwaysSuccessful(_application_output) => ExitCode::SUCCESS,
+            Self::Normal(application_output) => application_output.report(),
+            Self::AlwaysSuccessful(_application_output) => ExitCode::SUCCESS,
         }
     }
 }
@@ -73,12 +73,12 @@ impl Termination for ApplicationTermination {
 #[derive(Serialize)]
 #[serde(untagged)]
 pub(crate) enum ApplicationOutput {
-    /// Asseration by this program
+    /// Assertion by this program
     ComparisonStatement(results::ComparisonStatement),
     /// Ordered Map representation of versions
     OrderedVersionMap(results::OrderedVersionMap),
     /// Breakdown of version
-    VersionExplaination(results::VersionExplanation),
+    VersionExplanation(results::VersionExplanation),
     /// Flat list of versions
     FlatVersionsList(results::FlatVersionsList),
     /// Flat list of strings
@@ -91,42 +91,42 @@ pub(crate) enum ApplicationOutput {
 
 impl From<results::ComparisonStatement> for ApplicationOutput {
     fn from(value: results::ComparisonStatement) -> Self {
-        ApplicationOutput::ComparisonStatement(value)
+        Self::ComparisonStatement(value)
     }
 }
 
 impl From<results::OrderedVersionMap> for ApplicationOutput {
     fn from(value: results::OrderedVersionMap) -> Self {
-        ApplicationOutput::OrderedVersionMap(value)
+        Self::OrderedVersionMap(value)
     }
 }
 impl From<results::VersionExplanation> for ApplicationOutput {
     fn from(value: results::VersionExplanation) -> Self {
-        ApplicationOutput::VersionExplaination(value)
+        Self::VersionExplanation(value)
     }
 }
 
 impl From<results::FlatVersionsList> for ApplicationOutput {
     fn from(value: results::FlatVersionsList) -> Self {
-        ApplicationOutput::FlatVersionsList(value)
+        Self::FlatVersionsList(value)
     }
 }
 
 impl From<results::FilterTestResult> for ApplicationOutput {
     fn from(value: results::FilterTestResult) -> Self {
-        ApplicationOutput::FilterTestResult(value)
+        Self::FilterTestResult(value)
     }
 }
 
 impl From<results::ValidateResult> for ApplicationOutput {
     fn from(value: results::ValidateResult) -> Self {
-        ApplicationOutput::ValidateResult(value)
+        Self::ValidateResult(value)
     }
 }
 
 impl From<results::GenerateResult> for ApplicationOutput {
     fn from(value: results::GenerateResult) -> Self {
-        ApplicationOutput::FlatStringList(value.into())
+        Self::FlatStringList(value.into())
     }
 }
 
@@ -135,11 +135,9 @@ impl Termination for ApplicationOutput {
     //                     (at least for now).
     fn report(self) -> ExitCode {
         match self {
-            ApplicationOutput::ComparisonStatement(comparison_statement) => {
-                comparison_statement.report()
-            }
-            ApplicationOutput::FilterTestResult(filter_test_result) => filter_test_result.report(),
-            ApplicationOutput::ValidateResult(validate_result) => validate_result.report(),
+            Self::ComparisonStatement(comparison_statement) => comparison_statement.report(),
+            Self::FilterTestResult(filter_test_result) => filter_test_result.report(),
+            Self::ValidateResult(validate_result) => validate_result.report(),
             _ => ExitCode::SUCCESS,
         }
     }
@@ -151,25 +149,25 @@ impl Termination for ApplicationOutput {
 impl fmt::Display for ApplicationOutput {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ApplicationOutput::ComparisonStatement(v) => {
+            Self::ComparisonStatement(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::OrderedVersionMap(v) => {
+            Self::OrderedVersionMap(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::VersionExplaination(v) => {
+            Self::VersionExplanation(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::FlatVersionsList(v) => {
+            Self::FlatVersionsList(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::FlatStringList(v) => {
+            Self::FlatStringList(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::FilterTestResult(v) => {
+            Self::FilterTestResult(v) => {
                 write!(f, "{}", v)
             }
-            ApplicationOutput::ValidateResult(v) => {
+            Self::ValidateResult(v) => {
                 write!(f, "{}", v)
             }
         }

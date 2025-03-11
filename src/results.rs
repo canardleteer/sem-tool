@@ -35,7 +35,7 @@ pub(crate) struct ValidateResult {
 }
 
 impl ValidateResult {
-    pub(crate) fn validate(semantic_version: String, small: bool) -> ValidateResult {
+    pub(crate) fn validate(semantic_version: String, small: bool) -> Self {
         let pass = if small {
             Version::parse(&semantic_version).is_ok()
         } else {
@@ -45,7 +45,7 @@ impl ValidateResult {
                 .is_match(&semantic_version)
         };
 
-        ValidateResult { valid: pass }
+        Self { valid: pass }
     }
 }
 
@@ -140,14 +140,8 @@ impl fmt::Display for PreMetaSegment {
 impl From<&str> for PreMetaSegment {
     fn from(value: &str) -> Self {
         // WARNING(canardleteer): Note, the spec does not enforce any numeric limit here.
-        let digit_count = value
-            .chars()
-            .filter(|char| char.is_ascii_digit())
-            .collect::<Vec<char>>()
-            .len();
-
         PreMetaSegment {
-            kind: if digit_count == value.len() {
+            kind: if value.chars().all(|c| c.is_ascii_digit()) {
                 SegmentType::Numeric
             } else {
                 SegmentType::Ascii
