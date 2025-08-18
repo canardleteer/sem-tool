@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9](https://github.com/canardleteer/sem-tool/compare/v0.1.8...v0.1.9) - 2025-08-18
+
+### Other
+
+- *(deps)* bump actions/checkout from 4 to 5
+- *(deps)* bump actions/download-artifact from 4 to 5
+- automigrate to rust2024
+- performance on PreMetaSegment ascii check
+- use Self where possible
+- misc typos
+
 ## [0.1.8](https://github.com/canardleteer/sem-tool/compare/v0.1.7...v0.1.8) - 2025-03-09
 
 ### Added
