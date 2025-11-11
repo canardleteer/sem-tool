@@ -36,4 +36,13 @@ fn cli_validate_basic_cases() {
     assert
         .append_context(COMMAND_VALIDATE, "1 valid semver arg")
         .success();
+
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+    let assert = cmd.arg(COMMAND_VALIDATE).arg("0.0.0a").assert();
+    assert
+        .append_context(
+            COMMAND_VALIDATE,
+            "regression of: https://github.com/canardleteer/sem-tool/issues/50",
+        )
+        .failure();
 }
