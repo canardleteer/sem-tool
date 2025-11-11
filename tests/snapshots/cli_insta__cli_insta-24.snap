@@ -4,7 +4,7 @@ info:
   program: sem-tool
   args:
     - explain
-    - 0.1.2+a.0.b.1
+    - 0.1.2
 ---
 success: true
 exit_code: 0
@@ -13,15 +13,5 @@ exit_code: 0
 major: 0
 minor: 1
 patch: 2
-build_metadata_string: a.0.b.1
-build-metadata:
-- kind: Ascii
-  value: a
-- kind: Numeric
-  value: '0'
-- kind: Ascii
-  value: b
-- kind: Numeric
-  value: '1'
 
 ----- stderr -----

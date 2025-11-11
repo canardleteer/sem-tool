@@ -3,37 +3,13 @@ source: tests/cli_insta.rs
 info:
   program: sem-tool
   args:
-    - explain
-    - 0.1.2-rc.0.a.1.b+a.0.b.1
+    - validate
+    - 0.0.0a
 ---
-success: true
-exit_code: 0
+success: false
+exit_code: 1
 ----- stdout -----
 ---
-major: 0
-minor: 1
-patch: 2
-prerelease_string: rc.0.a.1.b
-prerelease:
-- kind: Ascii
-  value: rc
-- kind: Numeric
-  value: '0'
-- kind: Ascii
-  value: a
-- kind: Numeric
-  value: '1'
-- kind: Ascii
-  value: b
-build_metadata_string: a.0.b.1
-build-metadata:
-- kind: Ascii
-  value: a
-- kind: Numeric
-  value: '0'
-- kind: Ascii
-  value: b
-- kind: Numeric
-  value: '1'
+valid: false
 
 ----- stderr -----

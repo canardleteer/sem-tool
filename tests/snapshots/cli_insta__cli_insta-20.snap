@@ -3,14 +3,14 @@ source: tests/cli_insta.rs
 info:
   program: sem-tool
   args:
-    - explain
-    - a.b.c
+    - validate
+    - "-s"
+    - 0.0.0a
 ---
 success: false
-exit_code: 2
+exit_code: 1
 ----- stdout -----
+---
+valid: false
 
 ----- stderr -----
-error: invalid value 'a.b.c' for '<SEMANTIC_VERSION>': unexpected character 'a' while parsing major version number
-
-For more information, try '--help'.

@@ -5,15 +5,14 @@ info:
   args:
     - compare
     - "-e"
-    - "-s"
-    - 1.2.2
+    - 1.2.3+0
     - 1.2.3+1
 ---
 success: false
-exit_code: 100
+exit_code: 110
 ----- stdout -----
 ---
-semantic_ordering: Less
+semantic_ordering: Equal
 lexical_ordering: Less
 
 ----- stderr -----
