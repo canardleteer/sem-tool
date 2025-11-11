@@ -1,0 +1,17 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - sort
+    - "--lexical-sorting"
+    - "--fail-if-potentially-ambiguous"
+    - 0.1.2+bm0
+    - 0.1.2+bm1
+---
+success: false
+exit_code: 1
+----- stdout -----
+
+----- stderr -----
+Error: FailedRequirementError { err: "Potential Ambiguity Detected" }

@@ -1,0 +1,15 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - validate
+    - a.b.c
+---
+success: false
+exit_code: 1
+----- stdout -----
+---
+valid: false
+
+----- stderr -----
