@@ -157,6 +157,7 @@ fn cli_sort_basic_cases() {
 }
 
 const SORT_TEST_VERSION_COUNT_SMALL: usize = 32;
+#[cfg(not(windows))]
 const SORT_TEST_VERSION_COUNT_LARGE: usize = 128;
 
 fn sort_test_generic(
