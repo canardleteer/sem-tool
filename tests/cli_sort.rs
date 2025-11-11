@@ -213,6 +213,11 @@ proptest! {
     // Since the filters are incredibly complex from the framework, the odds of
     // not making mutually exclusive comparators is small. We're just testing
     // huge input here.
+    //
+    // FIXME(canardleteer): Windows tests are disabled, becuase Windows is
+    // incapable of passing "large" versions. We should detect that and
+    // change the meaning of "large for windows" instead.
+    #[cfg(not(windows))]
     #[test]
     fn sort_test_large(lexical_sorting: bool, reverse: bool, flatten: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_LARGE)) {
         sort_test_generic(lexical_sorting, reverse, flatten, filter, versions);
