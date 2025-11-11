@@ -63,6 +63,8 @@ fn cli_insta() {
         vec![COMMAND_VALIDATE, "0.1.2-rc.0.a.1.b+a.0.b.1"],
         vec![COMMAND_VALIDATE, "-s", "18446744073709551616.0.0"],
         vec![COMMAND_VALIDATE, "18446744073709551616.0.0"],
+        vec![COMMAND_VALIDATE, "-s", "0.0.0a"],
+        vec![COMMAND_VALIDATE, "0.0.0a"],
         vec![COMMAND_EXPLAIN, "a.b.c"],
         vec![COMMAND_EXPLAIN, "0.1.2-rc.0.a.1.b+a.0.b.1"],
         vec![COMMAND_EXPLAIN, "0.1.2"],

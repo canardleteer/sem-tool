@@ -4,7 +4,7 @@ info:
   program: sem-tool
   args:
     - explain
-    - 0.1.2-rc.0.a.1.b
+    - 0.1.2-rc.0.a.1.b+a.0.b.1
 ---
 success: true
 exit_code: 0
@@ -25,5 +25,15 @@ prerelease:
   value: '1'
 - kind: Ascii
   value: b
+build_metadata_string: a.0.b.1
+build-metadata:
+- kind: Ascii
+  value: a
+- kind: Numeric
+  value: '0'
+- kind: Ascii
+  value: b
+- kind: Numeric
+  value: '1'
 
 ----- stderr -----

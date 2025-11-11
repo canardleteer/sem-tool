@@ -4,14 +4,13 @@ info:
   program: sem-tool
   args:
     - explain
-    - 0.1.2
+    - a.b.c
 ---
-success: true
-exit_code: 0
+success: false
+exit_code: 2
 ----- stdout -----
----
-major: 0
-minor: 1
-patch: 2
 
 ----- stderr -----
+error: invalid value 'a.b.c' for '<SEMANTIC_VERSION>': unexpected character 'a' while parsing major version number
+
+For more information, try '--help'.
