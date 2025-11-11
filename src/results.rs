@@ -771,6 +771,12 @@ mod tests {
         let test = ValidateResult::validate("18446744073709551616.0.0-x+b".to_string(), false);
         assert!(test.valid);
 
+        // Test for a regression of: https://github.com/canardleteer/sem-tool/issues/50
+        let test = ValidateResult::validate("0.0.0a".to_string(), true);
+        assert!(!test.valid);
+        let test = ValidateResult::validate("0.0.0a".to_string(), false);
+        assert!(!test.valid);
+
         // Display Coverage
         let _ = format!("{}", test);
     }
