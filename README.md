@@ -376,10 +376,11 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
     - [X] basic
     - [ ] output snapshotting of all types
     - [ ] output snapshotting with good labels
-- [ ] Property testing
+- [X] Property testing
   - [X] There is work on [this
     branch](https://github.com/canardleteer/sem-tool/tree/proptest), but it
     needs a reorg after the CLI Testing lands in a more composable form.
+  - [ ] Clean up the CLI testing to use a a more generic test builder.
 - [ ] Unit Testing
   - [ ] Validate output
 - [X] Need status code responses options
