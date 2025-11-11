@@ -1,19 +1,19 @@
 [workspace]
 members = ["cargo:."]
 
+# Config for 'dist'
 [dist]
 # The preferred dist version to use in CI (Cargo.toml SemVer syntax)
-cargo-dist-version = "0.28.0"
+cargo-dist-version = "0.30.2"
 # CI backends to support
 ci = "github"
 # The installers to generate for each app
 installers = ["shell", "powershell", "npm", "homebrew", "msi"]
 # Target platforms to build apps for (Rust target-triple syntax)
-
 # NOTE(canardleteer): Disabled Reasons
 # - "aarch64-pc-windows-msvc" / needs `candle`
-targets = ["aarch64-apple-darwin", "aarch64-unknown-linux-gnu", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
-
+# - "aarch64-unknown-linux-gnu" "ERROR: there isn't a download for your platform aarch64-unknown-linux-gnu"
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
 # Whether to install an updater program
@@ -24,12 +24,6 @@ source-tarball = true
 pr-run-mode = "upload"
 # Checksums to generate for each App
 checksum = "sha512"
-
-# NOTE(canardleteer) Disabled Reasons: 
-# - Conflicts with "aarch64-unknown-linux-gnu"
-# Whether to embed dependency information using cargo-auditable
-# cargo-auditable = true
-
 # Whether to use cargo-cyclonedx to generate an SBOM
 cargo-cyclonedx = true
 # Whether to use omnibor-cli to generate OmniBOR Artifact IDs
