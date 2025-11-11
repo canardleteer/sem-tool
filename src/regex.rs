@@ -20,9 +20,7 @@ use semver::{BuildMetadata, Prerelease};
 /// Regex for Semantic Version 2.0.0, directly from the spec, with 2 changes:
 ///
 /// * ASCII Only Restriction
-/// * No prepended `^` or trailing `$`, since [proptest!] uses this with the
-///   [regex_generate](https://github.com/CryptArchy/regex_generate) crate.
-pub const SEMVER_REGEX: &str = r"(?-u:(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)";
+pub const SEMVER_REGEX: &str = r"^(?-u:(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$";
 
 /// Regex to build a Pre-Release string, always, without the `-`.
 pub const ALWAYS_PRERELEASE_REGEX: &str = r"(?-u:(?:((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)))";
@@ -40,7 +38,9 @@ pub(crate) const DEFAULT_MAX_REPEAT: u32 = 100;
 /// Generate [Vec<String>] filled with valid Semantic Versions.
 pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
     let mut rng = rand::rng();
-    let semver = rand_regex::Regex::compile(SEMVER_REGEX, DEFAULT_MAX_REPEAT).unwrap();
+    let semver =
+        rand_regex::Regex::compile(&SEMVER_REGEX[1..SEMVER_REGEX.len() - 1], DEFAULT_MAX_REPEAT)
+            .unwrap();
 
     (&mut rng)
         .sample_iter(&semver)
