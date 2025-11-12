@@ -1,3 +1,5 @@
+use assert_cmd::Command;
+
 #[allow(dead_code)]
 pub(crate) mod subcommands {
     pub(crate) const COMMAND_COMPARE: &str = "compare";
@@ -14,4 +16,9 @@ pub(crate) mod subcommands {
         COMMAND_SORT,
         COMMAND_VALIDATE,
     ];
+}
+
+#[allow(dead_code)]
+pub(crate) fn common_cmd() -> Command {
+    Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap()
 }

@@ -12,7 +12,6 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
-use assert_cmd::Command;
 use proptest::prelude::*;
 use proptest_semver::*;
 use semver::{Version, VersionReq};
@@ -20,10 +19,11 @@ use semver::{Version, VersionReq};
 mod common;
 use common::subcommands::*;
 
+use crate::common::common_cmd;
+
 #[test]
 fn cli_sort_invalid_input() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_SORT).arg("a.b.c").assert();
+    let assert = common_cmd().arg(COMMAND_SORT).arg("a.b.c").assert();
     assert
         .append_context(COMMAND_SORT, "1 bad semver args")
         .failure();
@@ -31,12 +31,10 @@ fn cli_sort_invalid_input() {
 
 #[test]
 fn cli_sort_basic_cases() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_SORT).arg("0.1.2-rc0").assert();
+    let assert = common_cmd().arg(COMMAND_SORT).arg("0.1.2-rc0").assert();
     assert.append_context(COMMAND_SORT, "1 item").success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("-f >0")
         .arg("0.1.2-rc0")
@@ -46,8 +44,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, -f >0")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("-f >1")
         .arg("0.1.2-rc0")
@@ -57,8 +54,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, -f >1")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("-f >a")
         .arg("0.1.2-rc0")
@@ -68,8 +64,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, -f >a")
         .failure();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("-r")
         .arg("0.1.2-rc0")
@@ -77,8 +72,7 @@ fn cli_sort_basic_cases() {
         .assert();
     assert.append_context(COMMAND_SORT, "2 items, -r").success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--flatten")
         .arg("0.1.2-rc0")
@@ -88,8 +82,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --flatten")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--lexical-sorting")
         .arg("0.1.2-rc0")
@@ -99,8 +92,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --lexical-sorting,")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--lexical-sorting")
         .arg("--flatten")
@@ -111,8 +103,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --lexical-sorting, --flatten")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--fail-if-potentially-ambiguous")
         .arg("0.1.2+bm0")
@@ -122,8 +113,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --lexical-sorting, --flatten")
         .failure();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("0.1.2+bm0")
         .arg("0.1.2+bm1")
@@ -132,8 +122,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --lexical-sorting, --flatten")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--fail-if-potentially-ambiguous")
         .arg("--flatten")
@@ -144,8 +133,7 @@ fn cli_sort_basic_cases() {
         .append_context(COMMAND_SORT, "2 items, --lexical-sorting, --flatten")
         .failure();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_SORT)
         .arg("--flatten")
         .arg("0.1.2+bm0")
@@ -190,8 +178,7 @@ fn sort_test_generic(
             .collect::<Vec<String>>(),
     );
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.args(&args).assert();
+    let assert = common_cmd().args(&args).assert();
     assert.append_context(COMMAND_SORT, "prop test").success();
 }
 

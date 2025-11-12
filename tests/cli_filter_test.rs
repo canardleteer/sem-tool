@@ -12,29 +12,35 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
-use assert_cmd::Command;
 use proptest::prelude::*;
 use proptest_semver::*;
 
 mod common;
 use common::subcommands::*;
 
+use crate::common::common_cmd;
+
 #[test]
 fn cli_filter_invalid_input() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_FILTER_TEST).arg(">a.b.c").assert();
+    let assert = common_cmd().arg(COMMAND_FILTER_TEST).arg(">a.b.c").assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "1 bad semver filter arg")
         .failure();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_FILTER_TEST).arg(">1").arg("x.y.z").assert();
+    let assert = common_cmd()
+        .arg(COMMAND_FILTER_TEST)
+        .arg(">1")
+        .arg("x.y.z")
+        .assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "1 bad semver arg")
         .failure();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_FILTER_TEST).arg("2.0.0").arg(">1").assert();
+    let assert = common_cmd()
+        .arg(COMMAND_FILTER_TEST)
+        .arg("2.0.0")
+        .arg(">1")
+        .assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "backwards args")
         .failure();
@@ -42,14 +48,16 @@ fn cli_filter_invalid_input() {
 
 #[test]
 fn cli_filter_test_basic_cases() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_FILTER_TEST).arg(">1").arg("2.0.0").assert();
+    let assert = common_cmd()
+        .arg(COMMAND_FILTER_TEST)
+        .arg(">1")
+        .arg("2.0.0")
+        .assert();
     assert
         .append_context(COMMAND_FILTER_TEST, ">1 test")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_FILTER_TEST)
         .arg(">1")
         .arg("0.0.1-rc1.br.0+abc")
@@ -61,8 +69,7 @@ fn cli_filter_test_basic_cases() {
 }
 
 fn filter_test_generic(filter: semver::VersionReq, version: semver::Version) {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg("filter-test")
         .arg(filter.to_string())
         .arg(version.to_string())
