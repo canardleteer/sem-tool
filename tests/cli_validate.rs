@@ -12,17 +12,17 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
-use assert_cmd::Command;
 use proptest::prelude::*;
 use proptest_semver::*;
 
 mod common;
 use common::subcommands::*;
 
+use crate::common::common_cmd;
+
 #[test]
 fn cli_validate_invalid_input() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_VALIDATE).arg("a.b.c").assert();
+    let assert = common_cmd().arg(COMMAND_VALIDATE).arg("a.b.c").assert();
     assert
         .append_context(COMMAND_VALIDATE, "1 bad semver args")
         .failure();
@@ -30,8 +30,7 @@ fn cli_validate_invalid_input() {
 
 #[test]
 fn cli_validate_basic_cases() {
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd
+    let assert = common_cmd()
         .arg(COMMAND_VALIDATE)
         .arg("0.1.2-rc.0.a.1.b+a.0.b.1")
         .assert();
@@ -39,8 +38,7 @@ fn cli_validate_basic_cases() {
         .append_context(COMMAND_VALIDATE, "1 valid semver arg")
         .success();
 
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg(COMMAND_VALIDATE).arg("0.0.0a").assert();
+    let assert = common_cmd().arg(COMMAND_VALIDATE).arg("0.0.0a").assert();
     assert
         .append_context(
             COMMAND_VALIDATE,
@@ -60,15 +58,13 @@ proptest! {
     })]
     #[test]
     fn prop_validate_small(v in arb_version()) {
-        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-        let assert = cmd.arg(COMMAND_VALIDATE).arg("-s").arg(v.to_string()).assert();
+        let assert = common_cmd().arg(COMMAND_VALIDATE).arg("-s").arg(v.to_string()).assert();
         assert.append_context(COMMAND_VALIDATE, "property testing").success();
     }
 
     #[test]
     fn prop_validate_regex(v in arb_semver()) {
-        let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-        let assert = cmd.arg(COMMAND_VALIDATE).arg(v).assert();
+        let assert = common_cmd().arg(COMMAND_VALIDATE).arg(v).assert();
         assert.append_context(COMMAND_VALIDATE, "property testing").success();
     }
 }

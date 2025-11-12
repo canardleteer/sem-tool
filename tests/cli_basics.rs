@@ -12,22 +12,17 @@
 //! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
-use assert_cmd::Command;
-
 mod common;
 use common::subcommands::*;
 
+use crate::common::common_cmd;
+
 #[test]
 fn cli_basics() {
-    // Fail with no input.
-    Command::cargo_bin(env!("CARGO_PKG_NAME"))
-        .unwrap()
-        .assert()
-        .failure();
+    common_cmd().assert().failure();
 
     // Success with --help.
-    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
-    let assert = cmd.arg("--help").assert();
+    let assert = common_cmd().arg("--help").assert();
     assert.append_context("basics", "help").success();
 }
 
@@ -41,29 +36,16 @@ fn cli_all_sub_commands() {
         // pass.
         match sub {
             "sort" | "generate" => {
-                Command::cargo_bin(env!("CARGO_PKG_NAME"))
-                    .unwrap()
-                    .arg(sub)
-                    .assert()
-                    .success();
+                common_cmd().arg(sub).assert().success();
             }
             _ => {
-                Command::cargo_bin(env!("CARGO_PKG_NAME"))
-                    .unwrap()
-                    .arg(sub)
-                    .assert()
-                    .failure();
+                common_cmd().arg(sub).assert().failure();
             }
         }
 
         // All subcommands asking for --help, should pass.
         //
         // Exceptions may eventually apply, but not yet.
-        Command::cargo_bin(env!("CARGO_PKG_NAME"))
-            .unwrap()
-            .arg(sub)
-            .arg("--help")
-            .assert()
-            .success();
+        common_cmd().arg(sub).arg("--help").assert().success();
     }
 }
