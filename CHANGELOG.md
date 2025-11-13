@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10](https://github.com/canardleteer/sem-tool/compare/v0.1.9...v0.1.10) - 2025-11-13
+
+### Added
+
+- name insta tests to avoid managing a list
+- proptest integration
+
+### Fixed
+
+- allow hygiene to pass on windows
+- remove sort_test_large for windows
+
+### Other
+
+- update dependencies
+- *(tests)* clean up a bunch of sprawl
+- update TODO list
+
 ## [0.1.9](https://github.com/canardleteer/sem-tool/compare/v0.1.8...v0.1.9) - 2025-11-11
 
 ### Fixed
