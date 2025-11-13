@@ -1,4 +1,4 @@
-use assert_cmd::Command;
+use assert_cmd::{Command, cargo::cargo_bin_cmd};
 
 #[allow(dead_code)]
 pub(crate) mod subcommands {
@@ -20,5 +20,5 @@ pub(crate) mod subcommands {
 
 #[allow(dead_code)]
 pub(crate) fn common_cmd() -> Command {
-    Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap()
+    cargo_bin_cmd!(env!("CARGO_PKG_NAME"))
 }
