@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.10](https://github.com/canardleteer/sem-tool/compare/v0.1.9...v0.1.10) - 2025-11-17
+
+### Added
+
+- name insta tests to avoid managing a list
+- proptest integration
+
+### Fixed
+
+- dependabot smoothing
+- allow hygiene to pass on windows
+- remove sort_test_large for windows
+
+### Other
+
+- *(deps)* bump actions/upload-artifact from 4 to 5
+- *(deps)* bump actions/download-artifact from 4 to 6
+- *(deps)* bump actions/checkout from 4 to 5
+- *(dist)* redact comments for smooth autogeneration
+- update dependencies
+- *(tests)* clean up a bunch of sprawl
+- update TODO list
+
 ## [0.1.9](https://github.com/canardleteer/sem-tool/compare/v0.1.8...v0.1.9) - 2025-11-11
 
 ### Fixed
