@@ -173,6 +173,19 @@ fn cli_insta() {
         "compare.semantic-exit-status.1",
         vec![COMMAND_COMPARE, "-s", "1.2.4+0", "1.2.3+1"],
     );
+    insta_targets.insert(
+        "bump.simple.1",
+        vec!["-o", "text", COMMAND_BUMP, "1.1.1", "--bump-major=1"],
+    );
+    insta_targets.insert(
+        "bump.simple.2",
+        vec![COMMAND_BUMP, "1.1.1", "--bump-major=1"],
+    );
+    insta_targets.insert(
+        "set.simple.1",
+        vec!["-o", "text", COMMAND_SET, "1.1.1", "--set-major=20"],
+    );
+    insta_targets.insert("set.simple.2", vec![COMMAND_SET, "1.1.1", "--set-major=20"]);
 
     for (key, args) in insta_targets.iter() {
         assert_cmd_snapshot!(*key, cli().args(args));

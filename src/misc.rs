@@ -87,6 +87,8 @@ pub(crate) enum ApplicationOutput {
     FilterTestResult(results::FilterTestResult),
     /// Results from a test
     ValidateResult(results::ValidateResult),
+    /// Just a plain version
+    JustAVersion(results::VersionMutationResult),
 }
 
 impl From<results::ComparisonStatement> for ApplicationOutput {
@@ -130,6 +132,12 @@ impl From<results::GenerateResult> for ApplicationOutput {
     }
 }
 
+impl From<results::VersionMutationResult> for ApplicationOutput {
+    fn from(value: results::VersionMutationResult) -> Self {
+        Self::JustAVersion(value)
+    }
+}
+
 impl Termination for ApplicationOutput {
     // NOTE(canardleteer): only expected to be called along certain code paths
     //                     (at least for now).
@@ -168,6 +176,9 @@ impl fmt::Display for ApplicationOutput {
                 write!(f, "{}", v)
             }
             Self::ValidateResult(v) => {
+                write!(f, "{}", v)
+            }
+            Self::JustAVersion(v) => {
                 write!(f, "{}", v)
             }
         }

@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - set
+    - 1.1.1
+    - "--set-major=20"
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+mutated_version: 20.1.1
+
+----- stderr -----

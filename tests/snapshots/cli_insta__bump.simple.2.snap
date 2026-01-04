@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - bump
+    - 1.1.1
+    - "--bump-major=1"
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+mutated_version: 2.1.1
+
+----- stderr -----
