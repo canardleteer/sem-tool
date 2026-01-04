@@ -16,6 +16,7 @@
 //! These are generally the "Results" we're looking for, as types.
 use std::{
     cmp::Ordering,
+    error::Error,
     fmt,
     process::{ExitCode, Termination},
 };
@@ -23,7 +24,7 @@ use std::{
 use indexmap::IndexMap;
 use rand::prelude::*;
 use regex::Regex;
-use semver::{BuildMetadata, Version, VersionReq};
+use semver::{BuildMetadata, Prerelease, Version, VersionReq};
 use serde::Serialize;
 
 use super::regex::{generate_any_valid_semver, generate_u64_safe_semver};
@@ -434,6 +435,117 @@ impl fmt::Display for GenerateResult {
     }
 }
 
+#[derive(Serialize, PartialEq)]
+pub(crate) struct VersionMutationResult {
+    pub(crate) mutated_version: Version,
+}
+
+impl VersionMutationResult {
+    pub(crate) fn set(
+        version: &Version,
+        major: Option<u64>,
+        minor: Option<u64>,
+        patch: Option<u64>,
+        pre_release: Option<String>,
+        build_metadata: Option<String>,
+    ) -> Result<VersionMutationResult, Box<dyn Error>> {
+        let mut response = version.clone();
+
+        if let Some(major) = major {
+            response.major = major
+        }
+
+        if let Some(minor) = minor {
+            response.minor = minor
+        }
+
+        if let Some(patch) = patch {
+            response.patch = patch
+        }
+
+        if let Some(pre_release) = pre_release {
+            response.pre = match Prerelease::new(pre_release.as_str()) {
+                Ok(p) => p,
+                Err(e) => return Err(format!("unable to use string as pre-release: {}", e).into()),
+            };
+        }
+
+        if let Some(build_metadata) = build_metadata {
+            response.build = match BuildMetadata::new(build_metadata.as_str()) {
+                Ok(b) => b,
+                Err(e) => {
+                    return Err(format!("unable to use string as build metadata: {}", e).into());
+                }
+            };
+        }
+
+        Ok(VersionMutationResult {
+            mutated_version: response,
+        })
+    }
+
+    // NOTE(canardleteer): We could actually do bumps on pre-release and
+    //                     build-metadata, if we supported a selector and
+    //                     confirmed the segment was numeric.
+    pub(crate) fn bump(
+        version: &Version,
+        major: Option<u64>,
+        minor: Option<u64>,
+        patch: Option<u64>,
+    ) -> Result<VersionMutationResult, Box<dyn Error>> {
+        let mut response = version.clone();
+
+        if let Some(major) = major {
+            response.major = match response.major.checked_add(major) {
+                Some(m) => m,
+                None => {
+                    return Err(format!(
+                        "major bump ({} + {}) overflows u64",
+                        response.major, major
+                    )
+                    .into());
+                }
+            }
+        }
+
+        if let Some(minor) = minor {
+            response.minor = match response.minor.checked_add(minor) {
+                Some(m) => m,
+                None => {
+                    return Err(format!(
+                        "minor bump ({} + {}) overflows u64",
+                        response.minor, minor
+                    )
+                    .into());
+                }
+            }
+        }
+
+        if let Some(patch) = patch {
+            response.patch = match response.patch.checked_add(patch) {
+                Some(m) => m,
+                None => {
+                    return Err(format!(
+                        "patch bump ({} + {}) overflows u64",
+                        response.patch, patch
+                    )
+                    .into());
+                }
+            }
+        }
+
+        Ok(VersionMutationResult {
+            mutated_version: response,
+        })
+    }
+}
+
+impl fmt::Display for VersionMutationResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.mutated_version)
+    }
+}
+
 /// Invent a way to reasonably express a non-equivalent ComparisonStatement in
 /// a u8, but really, at that point, just use the YAML output.
 ///
@@ -795,6 +907,49 @@ mod tests {
         let test = GenerateResult::new(true, 1);
         // Display Coverage
         let _ = format!("{}", test);
+    }
+
+    // VersionMutationResult
+    #[test]
+    fn test_bump_and_set() {
+        let base_version = Version::new(1, 1, 1);
+
+        let set_version = VersionMutationResult::set(
+            &base_version,
+            Some(2),
+            Some(3),
+            Some(4),
+            Some("a.b.c".to_string()),
+            Some("x.y.z".to_string()),
+        )
+        .unwrap();
+        let bmp_version =
+            VersionMutationResult::bump(&base_version, Some(2), Some(3), Some(4)).unwrap();
+
+        assert_eq!(set_version.mutated_version.major, 2);
+        assert_eq!(bmp_version.mutated_version.major, 3);
+
+        assert_eq!(set_version.mutated_version.minor, 3);
+        assert_eq!(bmp_version.mutated_version.minor, 4);
+
+        assert_eq!(set_version.mutated_version.patch, 4);
+        assert_eq!(bmp_version.mutated_version.patch, 5);
+
+        assert_eq!(set_version.mutated_version.pre.as_str(), "a.b.c");
+        assert_eq!(bmp_version.mutated_version.pre, Prerelease::EMPTY);
+
+        assert_eq!(set_version.mutated_version.build.as_str(), "x.y.z");
+        assert_eq!(bmp_version.mutated_version.build, BuildMetadata::EMPTY);
+
+        assert!(
+            VersionMutationResult::bump(&base_version, Some(u64::MAX), Some(3), Some(4)).is_err()
+        );
+        assert!(
+            VersionMutationResult::bump(&base_version, Some(2), Some(u64::MAX), Some(4)).is_err()
+        );
+        assert!(
+            VersionMutationResult::bump(&base_version, Some(2), Some(3), Some(u64::MAX)).is_err()
+        );
     }
 
     // ComparisonStatement

@@ -210,6 +210,40 @@ pub enum Commands {
         #[clap(default_value_t = 1)]
         count: usize,
     },
+    /// Set commands will replace one segment of semver, with a specified one,
+    /// and print out the mutated version.
+    Set {
+        semantic_version: Version,
+
+        #[clap(long, action)]
+        set_major: Option<u64>,
+        #[clap(long, action)]
+        set_minor: Option<u64>,
+        #[clap(long, action)]
+        set_patch: Option<u64>,
+        #[clap(long, action)]
+        set_pre_release: Option<String>,
+        #[clap(long, action)]
+        set_build_metadata: Option<String>,
+    },
+    /// Bump commands will increment one segment of semver by the specified
+    /// amount, and print out the mutated version.
+    ///
+    /// Only Major, Minor and Patch are supported. You'll want to consider the
+    /// `set` subcommand for pre-release and build-metadata.
+    Bump {
+        semantic_version: Version,
+
+        #[clap(long, action)]
+        bump_major: Option<u64>,
+        #[clap(long, action)]
+        bump_minor: Option<u64>,
+        #[clap(long, action)]
+        bump_patch: Option<u64>,
+        // NOTE(canardleteer): We could actually do bumps on pre-release and
+        //                     build-metadata, if we supported a selector and
+        //                     confirmed the segment chosen was numeric.
+    },
 }
 
 fn main() -> Result<ApplicationTermination, Box<dyn Error>> {
@@ -296,6 +330,28 @@ fn main() -> Result<ApplicationTermination, Box<dyn Error>> {
         } => filter_test(&filter, &semantic_version).into(),
         Commands::Validate { version, small } => validate(version, small).into(),
         Commands::Generate { small, count } => generate(small, count).into(),
+        Commands::Set {
+            semantic_version,
+            set_major,
+            set_minor,
+            set_patch,
+            set_pre_release,
+            set_build_metadata,
+        } => set(
+            &semantic_version,
+            set_major,
+            set_minor,
+            set_patch,
+            set_pre_release,
+            set_build_metadata,
+        )?
+        .into(),
+        Commands::Bump {
+            semantic_version,
+            bump_major,
+            bump_minor,
+            bump_patch,
+        } => bump(&semantic_version, bump_major, bump_minor, bump_patch)?.into(),
     };
 
     match args.out {
@@ -348,6 +404,26 @@ fn validate(semantic_version: String, small: bool) -> ValidateResult {
 
 fn generate(small: bool, count: usize) -> GenerateResult {
     GenerateResult::new(small, count)
+}
+
+fn set(
+    version: &Version,
+    major: Option<u64>,
+    minor: Option<u64>,
+    patch: Option<u64>,
+    pre_release: Option<String>,
+    build_metadata: Option<String>,
+) -> Result<VersionMutationResult, Box<dyn Error>> {
+    VersionMutationResult::set(version, major, minor, patch, pre_release, build_metadata)
+}
+
+fn bump(
+    version: &Version,
+    major: Option<u64>,
+    minor: Option<u64>,
+    patch: Option<u64>,
+) -> Result<VersionMutationResult, Box<dyn Error>> {
+    VersionMutationResult::bump(version, major, minor, patch)
 }
 
 #[cfg(test)]

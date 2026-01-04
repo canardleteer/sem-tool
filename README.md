@@ -157,6 +157,29 @@ build-metadata:
   value: '4'
 ```
 
+### `bump` & `set`
+
+- Relatively simple commands to bump values or set values, given a version.
+- `-o text` makes the output easy to capture in an environment variable.
+
+```self
+$ $sem-tool -o text bump 0.0.1 --bump-patch 1
+0.0.2
+
+$ $sem-tool bump 0.0.1 --bump-patch 1
+---
+mutated_version: 0.0.2
+```
+
+```self
+$ sem-tool -o text set 0.0.1 --set-patch 20
+0.0.20
+
+$ sem-tool set 0.0.1 --set-patch 20
+---
+mutated_version: 0.0.20
+```
+
 ### `compare`
 
 - Versions, must have `MAJOR`, `MINOR`, `PATCH` components under `u64::MAX`.
