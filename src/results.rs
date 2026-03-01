@@ -236,6 +236,12 @@ impl fmt::Display for VersionExplanation {
     }
 }
 
+impl Termination for VersionExplanation {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
+    }
+}
+
 /// A simple list of Versions.
 #[derive(Serialize, PartialEq)]
 pub(crate) struct FlatVersionsList {
@@ -264,6 +270,12 @@ impl fmt::Display for FlatVersionsList {
     }
 }
 
+impl Termination for FlatVersionsList {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
+    }
+}
+
 /// A simple list of Strings.
 ///
 /// NOTE(canardleteer): Probably could become any serializable type with Display.
@@ -286,6 +298,12 @@ impl fmt::Display for FlatStringList {
             writeln!(f, "{v}")?
         }
         Ok(())
+    }
+}
+
+impl Termination for FlatStringList {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
     }
 }
 
@@ -375,6 +393,12 @@ impl fmt::Display for OrderedVersionMap {
             }
         }
         Ok(())
+    }
+}
+
+impl Termination for OrderedVersionMap {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
     }
 }
 
@@ -543,6 +567,12 @@ impl VersionMutationResult {
 impl fmt::Display for VersionMutationResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.mutated_version)
+    }
+}
+
+impl Termination for VersionMutationResult {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
     }
 }
 
