@@ -44,15 +44,21 @@ pub(crate) enum OutputFormat {
     Json,
 }
 
-/// ApplicationTermination catches some of the awkward flagging around how we
-/// determine our exit status.
-pub(crate) enum ApplicationTermination {
-    Normal(ApplicationOutput),
-    AlwaysSuccessful(ApplicationOutput),
+/// Trait for subcommand output: types that can be written to stdout and report an exit code.
+/// Each subcommand selects one of these types; the concrete type is preserved in [SubcommandResult].
+#[allow(dead_code)] // bound for subcommand result types; used for documentation and future accessors
+pub(crate) trait SubcommandOutput: fmt::Display + Serialize + Termination {}
+
+impl<T: fmt::Display + Serialize + Termination> SubcommandOutput for T {}
+
+/// Exit policy wrapper: normal (use the result's exit code) vs always success.
+pub(crate) enum ExitOutcome {
+    Normal(SubcommandResult),
+    AlwaysSuccessful(SubcommandResult),
 }
 
-impl ApplicationTermination {
-    pub(crate) const fn new(output: ApplicationOutput, hard_success: bool) -> Self {
+impl ExitOutcome {
+    pub(crate) const fn new(output: SubcommandResult, hard_success: bool) -> Self {
         if hard_success {
             Self::AlwaysSuccessful(output)
         } else {
@@ -61,18 +67,18 @@ impl ApplicationTermination {
     }
 }
 
-impl Termination for ApplicationTermination {
+impl Termination for ExitOutcome {
     fn report(self) -> ExitCode {
         match self {
-            Self::Normal(application_output) => application_output.report(),
-            Self::AlwaysSuccessful(_application_output) => ExitCode::SUCCESS,
+            Self::Normal(result) => result.report(),
+            Self::AlwaysSuccessful(_result) => ExitCode::SUCCESS,
         }
     }
 }
 
 #[derive(Serialize)]
 #[serde(untagged)]
-pub(crate) enum ApplicationOutput {
+pub(crate) enum SubcommandResult {
     /// Assertion by this program
     ComparisonStatement(results::ComparisonStatement),
     /// Ordered Map representation of versions
@@ -91,54 +97,54 @@ pub(crate) enum ApplicationOutput {
     JustAVersion(results::VersionMutationResult),
 }
 
-impl From<results::ComparisonStatement> for ApplicationOutput {
+impl From<results::ComparisonStatement> for SubcommandResult {
     fn from(value: results::ComparisonStatement) -> Self {
         Self::ComparisonStatement(value)
     }
 }
 
-impl From<results::OrderedVersionMap> for ApplicationOutput {
+impl From<results::OrderedVersionMap> for SubcommandResult {
     fn from(value: results::OrderedVersionMap) -> Self {
         Self::OrderedVersionMap(value)
     }
 }
-impl From<results::VersionExplanation> for ApplicationOutput {
+impl From<results::VersionExplanation> for SubcommandResult {
     fn from(value: results::VersionExplanation) -> Self {
         Self::VersionExplanation(value)
     }
 }
 
-impl From<results::FlatVersionsList> for ApplicationOutput {
+impl From<results::FlatVersionsList> for SubcommandResult {
     fn from(value: results::FlatVersionsList) -> Self {
         Self::FlatVersionsList(value)
     }
 }
 
-impl From<results::FilterTestResult> for ApplicationOutput {
+impl From<results::FilterTestResult> for SubcommandResult {
     fn from(value: results::FilterTestResult) -> Self {
         Self::FilterTestResult(value)
     }
 }
 
-impl From<results::ValidateResult> for ApplicationOutput {
+impl From<results::ValidateResult> for SubcommandResult {
     fn from(value: results::ValidateResult) -> Self {
         Self::ValidateResult(value)
     }
 }
 
-impl From<results::GenerateResult> for ApplicationOutput {
+impl From<results::GenerateResult> for SubcommandResult {
     fn from(value: results::GenerateResult) -> Self {
         Self::FlatStringList(value.into())
     }
 }
 
-impl From<results::VersionMutationResult> for ApplicationOutput {
+impl From<results::VersionMutationResult> for SubcommandResult {
     fn from(value: results::VersionMutationResult) -> Self {
         Self::JustAVersion(value)
     }
 }
 
-impl Termination for ApplicationOutput {
+impl Termination for SubcommandResult {
     // NOTE(canardleteer): only expected to be called along certain code paths
     //                     (at least for now).
     fn report(self) -> ExitCode {
@@ -151,10 +157,8 @@ impl Termination for ApplicationOutput {
     }
 }
 
-/// Display for Application Output
-///
-/// While this exists, I'm tempted to just make the default YAML.
-impl fmt::Display for ApplicationOutput {
+/// Display for subcommand result (delegates to inner type).
+impl fmt::Display for SubcommandResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::ComparisonStatement(v) => {

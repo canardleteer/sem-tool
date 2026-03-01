@@ -246,12 +246,12 @@ pub enum Commands {
     },
 }
 
-fn main() -> Result<ApplicationTermination, Box<dyn Error>> {
+fn main() -> Result<ExitOutcome, Box<dyn Error>> {
     let args = Args::parse();
 
     let mut ignore_exit_status_from_output = false;
 
-    let application_output: ApplicationOutput = match args.cmd {
+    let result: SubcommandResult = match args.cmd {
         Commands::Explain { semantic_version } => explain(&semantic_version).into(),
         Commands::Compare {
             set_exit_status,
@@ -319,9 +319,10 @@ fn main() -> Result<ApplicationTermination, Box<dyn Error>> {
                 }));
             }
 
-            match flatten {
-                true => FlatVersionsList::from(&mut ordered_version_list).into(),
-                false => ordered_version_list.into(),
+            if flatten {
+                FlatVersionsList::from(&mut ordered_version_list).into()
+            } else {
+                ordered_version_list.into()
             }
         }
         Commands::FilterTest {
@@ -355,24 +356,21 @@ fn main() -> Result<ApplicationTermination, Box<dyn Error>> {
     };
 
     match args.out {
-        OutputFormat::Text => print!("{application_output}"),
+        OutputFormat::Text => print!("{result}"),
         OutputFormat::Yaml => {
             println!("---");
-            let yaml = serde_yaml::to_string(&application_output)
+            let yaml = serde_yaml::to_string(&result)
                 .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
             print!("{yaml}");
         }
         OutputFormat::Json => {
-            let json = serde_json::to_string(&application_output)
+            let json = serde_json::to_string(&result)
                 .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
             println!("{json}");
         }
     }
 
-    Ok(ApplicationTermination::new(
-        application_output,
-        ignore_exit_status_from_output,
-    ))
+    Ok(ExitOutcome::new(result, ignore_exit_status_from_output))
 }
 
 fn sort(
