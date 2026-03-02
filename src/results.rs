@@ -48,6 +48,11 @@ impl ValidateResult {
 
         Self { valid: pass }
     }
+
+    /// True if validation passed (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn success(&self) -> bool {
+        self.valid
+    }
 }
 
 impl fmt::Display for ValidateResult {
@@ -79,6 +84,11 @@ pub(crate) struct FilterTestResult {
 impl FilterTestResult {
     pub(crate) fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
         filter.matches(semantic_version).into()
+    }
+
+    /// True if filter matched (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn success(&self) -> bool {
+        self.pass
     }
 }
 
@@ -427,6 +437,12 @@ impl ComparisonStatement {
     #[allow(dead_code)]
     pub(crate) fn lexical_ordering(&self) -> &SerializableOrdering {
         &self.lexical_ordering
+    }
+
+    /// True when both semantic and lexical orderings are Equal (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn both_equal(&self) -> bool {
+        *self.semantic_ordering() == SerializableOrdering::Equal
+            && *self.lexical_ordering() == SerializableOrdering::Equal
     }
 }
 

@@ -15,6 +15,7 @@
 //!
 //! This is a bunch of last mile display + serialization logic.
 use clap::ValueEnum;
+use clap_mcp::{ClapMcpToolError, ClapMcpToolOutput, IntoClapMcpResult, IntoClapMcpToolError};
 use core::fmt;
 use serde::Serialize;
 use std::process::{ExitCode, Termination};
@@ -42,6 +43,23 @@ pub(crate) enum OutputFormat {
     Text,
     Yaml,
     Json,
+}
+
+impl OutputFormat {
+    /// Format a subcommand result for CLI stdout. Not used for MCP (serialization handled there).
+    pub(crate) fn format_result(
+        &self,
+        result: &SubcommandResult,
+    ) -> Result<String, ApplicationError> {
+        match self {
+            OutputFormat::Text => Ok(result.to_string()),
+            OutputFormat::Yaml => serde_yaml::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })
+                .map(|s| format!("---\n{s}")),
+            OutputFormat::Json => serde_json::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() }),
+        }
+    }
 }
 
 /// Trait for subcommand output: types that can be written to stdout and report an exit code.
@@ -141,6 +159,39 @@ impl From<results::GenerateResult> for SubcommandResult {
 impl From<results::VersionMutationResult> for SubcommandResult {
     fn from(value: results::VersionMutationResult) -> Self {
         Self::JustAVersion(value)
+    }
+}
+
+/// MCP tool response wrapper: explicit `ok` for exit-code-like semantics (Validate, FilterTest, Compare).
+#[derive(Serialize)]
+pub(crate) struct McpToolOutput {
+    pub(crate) ok: bool,
+    pub(crate) result: SubcommandResult,
+}
+
+/// Compute success for MCP: true for exit-code success, so clients get explicit semantics.
+fn success_for_mcp(result: &SubcommandResult) -> bool {
+    match result {
+        SubcommandResult::ValidateResult(v) => v.success(),
+        SubcommandResult::FilterTestResult(f) => f.success(),
+        SubcommandResult::ComparisonStatement(c) => c.both_equal(),
+        _ => true,
+    }
+}
+
+impl IntoClapMcpResult for SubcommandResult {
+    fn into_tool_result(self) -> std::result::Result<ClapMcpToolOutput, ClapMcpToolError> {
+        let ok = success_for_mcp(&self);
+        let wrapped = McpToolOutput { ok, result: self };
+        serde_json::to_value(&wrapped)
+            .map(ClapMcpToolOutput::Structured)
+            .map_err(|e| ClapMcpToolError::text(e.to_string()))
+    }
+}
+
+impl IntoClapMcpToolError for ApplicationError {
+    fn into_tool_error(self) -> ClapMcpToolError {
+        ClapMcpToolError::text(self.to_string())
     }
 }
 
