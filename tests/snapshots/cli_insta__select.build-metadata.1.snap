@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - select
+    - build-metadata
+    - 1.0.0+abc.1
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+value: abc.1
+
+----- stderr -----

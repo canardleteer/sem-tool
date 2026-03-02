@@ -187,6 +187,38 @@ fn cli_insta() {
     );
     insta_targets.insert("set.simple.2", vec![COMMAND_SET, "1.1.1", "--set-major=20"]);
 
+    // Select Tests
+    insta_targets.insert("select.major.1", vec![COMMAND_SELECT, "major", "1.2.3"]);
+    insta_targets.insert(
+        "select.pre-release.present",
+        vec![COMMAND_SELECT, "pre-release", "1.0.0-rc.1"],
+    );
+    insta_targets.insert(
+        "select.pre-release.missing",
+        vec![COMMAND_SELECT, "pre-release", "1.0.0"],
+    );
+    insta_targets.insert(
+        "select.pre-release.fail-if-not-found",
+        vec![
+            COMMAND_SELECT,
+            "pre-release",
+            "1.0.0",
+            "--fail-if-not-found",
+        ],
+    );
+    insta_targets.insert(
+        "select.build-metadata.1",
+        vec![COMMAND_SELECT, "build-metadata", "1.0.0+abc.1"],
+    );
+    insta_targets.insert(
+        "select.text.1",
+        vec!["-o", "text", COMMAND_SELECT, "patch", "2.0.4"],
+    );
+    insta_targets.insert(
+        "select.small.1",
+        vec![COMMAND_SELECT, "-s", "minor", "10.20.30"],
+    );
+
     for (key, args) in insta_targets.iter() {
         assert_cmd_snapshot!(*key, cli().args(args));
     }

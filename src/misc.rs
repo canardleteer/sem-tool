@@ -95,6 +95,8 @@ pub(crate) enum SubcommandResult {
     ValidateResult(results::ValidateResult),
     /// Just a plain version
     JustAVersion(results::VersionMutationResult),
+    /// Single component selection result
+    SelectResult(results::SelectResult),
 }
 
 impl From<results::ComparisonStatement> for SubcommandResult {
@@ -144,6 +146,12 @@ impl From<results::VersionMutationResult> for SubcommandResult {
     }
 }
 
+impl From<results::SelectResult> for SubcommandResult {
+    fn from(value: results::SelectResult) -> Self {
+        Self::SelectResult(value)
+    }
+}
+
 impl Termination for SubcommandResult {
     // NOTE(canardleteer): only expected to be called along certain code paths
     //                     (at least for now).
@@ -152,6 +160,7 @@ impl Termination for SubcommandResult {
             Self::ComparisonStatement(comparison_statement) => comparison_statement.report(),
             Self::FilterTestResult(filter_test_result) => filter_test_result.report(),
             Self::ValidateResult(validate_result) => validate_result.report(),
+            Self::SelectResult(select_result) => select_result.report(),
             _ => ExitCode::SUCCESS,
         }
     }
@@ -183,6 +192,9 @@ impl fmt::Display for SubcommandResult {
                 write!(f, "{}", v)
             }
             Self::JustAVersion(v) => {
+                write!(f, "{}", v)
+            }
+            Self::SelectResult(v) => {
                 write!(f, "{}", v)
             }
         }
