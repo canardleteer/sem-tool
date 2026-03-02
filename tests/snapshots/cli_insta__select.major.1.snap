@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - select
+    - major
+    - 1.2.3
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+value: '1'
+
+----- stderr -----

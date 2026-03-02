@@ -27,7 +27,7 @@ use regex::Regex;
 use semver::{BuildMetadata, Prerelease, Version, VersionReq};
 use serde::Serialize;
 
-use super::regex::{generate_any_valid_semver, generate_u64_safe_semver};
+use super::regex::{SEMVER_REGEX, generate_any_valid_semver, generate_u64_safe_semver};
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
@@ -108,6 +108,141 @@ impl fmt::Display for FilterTestResult {
     }
 }
 
+/// Component of a semantic version that can be selected.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum SelectComponent {
+    Major,
+    Minor,
+    Patch,
+    PreRelease,
+    BuildMetadata,
+}
+
+/// Result of selecting a single component from a semantic version.
+#[derive(Serialize, PartialEq)]
+pub(crate) struct SelectResult {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    value: Option<String>,
+    #[serde(skip)]
+    fail_if_not_found: bool,
+}
+
+/// Error when select cannot parse the version string.
+#[derive(Debug)]
+struct SelectParseError(String);
+
+impl fmt::Display for SelectParseError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for SelectParseError {}
+
+impl SelectResult {
+    /// Run select: parse version (regex by default, or semver crate with small),
+    /// extract the requested component, and build result.
+    pub(crate) fn select(
+        version: &str,
+        component: SelectComponent,
+        small: bool,
+        fail_if_not_found: bool,
+    ) -> Result<Self, Box<dyn Error>> {
+        let value = if small {
+            let v = Version::parse(version).map_err(|e| {
+                SelectParseError(format!("unable to parse semantic version: {version}: {e}"))
+            })?;
+            Self::extract_from_version(&v, component)
+        } else {
+            let parsed = parse_semver_components(version).ok_or_else(|| {
+                SelectParseError(format!(
+                    "version string did not match semver regex: {version}"
+                ))
+            })?;
+            Self::extract_from_regex(parsed, component)
+        };
+        Ok(Self {
+            value,
+            fail_if_not_found,
+        })
+    }
+
+    fn extract_from_version(v: &Version, component: SelectComponent) -> Option<String> {
+        match component {
+            SelectComponent::Major => Some(v.major.to_string()),
+            SelectComponent::Minor => Some(v.minor.to_string()),
+            SelectComponent::Patch => Some(v.patch.to_string()),
+            SelectComponent::PreRelease => {
+                let s = v.pre.as_str();
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s.to_string())
+                }
+            }
+            SelectComponent::BuildMetadata => {
+                let s = v.build.as_str();
+                if s.is_empty() {
+                    None
+                } else {
+                    Some(s.to_string())
+                }
+            }
+        }
+    }
+
+    fn extract_from_regex(
+        (major, minor, patch, pre, build): SemverRegexCaptures,
+        component: SelectComponent,
+    ) -> Option<String> {
+        match component {
+            SelectComponent::Major => Some(major),
+            SelectComponent::Minor => Some(minor),
+            SelectComponent::Patch => Some(patch),
+            SelectComponent::PreRelease => pre,
+            SelectComponent::BuildMetadata => build,
+        }
+    }
+}
+
+/// Parse a version string with SEMVER_REGEX; returns (major, minor, patch, pre-release, build_metadata).
+type SemverRegexCaptures = (String, String, String, Option<String>, Option<String>);
+
+fn parse_semver_components(s: &str) -> Option<SemverRegexCaptures> {
+    let re = Regex::new(SEMVER_REGEX).ok()?;
+    let cap = re.captures(s)?;
+    let major = cap.get(1)?.as_str().to_string();
+    let minor = cap.get(2)?.as_str().to_string();
+    let patch = cap.get(3)?.as_str().to_string();
+    let pre = cap
+        .get(4)
+        .map(|m| m.as_str().to_string())
+        .filter(|s| !s.is_empty());
+    let build = cap
+        .get(5)
+        .map(|m| m.as_str().to_string())
+        .filter(|s| !s.is_empty());
+    Some((major, minor, patch, pre, build))
+}
+
+impl fmt::Display for SelectResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(ref v) = self.value {
+            writeln!(f, "{v}")?;
+        }
+        Ok(())
+    }
+}
+
+impl Termination for SelectResult {
+    fn report(self) -> std::process::ExitCode {
+        if self.fail_if_not_found && self.value.is_none() {
+            ExitCode::FAILURE
+        } else {
+            ExitCode::SUCCESS
+        }
+    }
+}
 #[derive(Clone, Debug, Serialize, PartialEq)]
 pub(crate) enum SegmentType {
     Numeric,

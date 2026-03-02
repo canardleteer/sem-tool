@@ -20,7 +20,7 @@
 //!                     more important than rust-doc here.
 #![allow(rustdoc::bare_urls)]
 
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
 use semver::{Version, VersionReq};
 use std::error::Error;
 use std::io;
@@ -31,6 +31,28 @@ mod results;
 
 use misc::*;
 use results::*;
+
+/// Component of a semantic version for the select subcommand.
+#[derive(ValueEnum, Clone, Copy, Debug)]
+pub enum SemverComponent {
+    Major,
+    Minor,
+    Patch,
+    PreRelease,
+    BuildMetadata,
+}
+
+impl From<SemverComponent> for SelectComponent {
+    fn from(c: SemverComponent) -> Self {
+        match c {
+            SemverComponent::Major => SelectComponent::Major,
+            SemverComponent::Minor => SelectComponent::Minor,
+            SemverComponent::Patch => SelectComponent::Patch,
+            SemverComponent::PreRelease => SelectComponent::PreRelease,
+            SemverComponent::BuildMetadata => SelectComponent::BuildMetadata,
+        }
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -244,6 +266,26 @@ pub enum Commands {
         //                     build-metadata, if we supported a selector and
         //                     confirmed the segment chosen was numeric.
     },
+    /// Select a single component from a valid Semantic Version.
+    ///
+    /// By default uses the official semver regex (spec-compliant, supports any
+    /// numeric size for MAJOR.MINOR.PATCH). Use `--small` to parse with the
+    /// semver crate (u64-bound).
+    ///
+    /// For optional components (pre-release, build-metadata), if absent then
+    /// nothing is printed and exit is 0 unless `--fail-if-not-found` is set.
+    Select {
+        /// Which component to extract (major, minor, patch, pre-release, build-metadata).
+        component: SemverComponent,
+        /// Version string to parse.
+        version: String,
+        /// Use the semver crate for parsing (MAJOR.MINOR.PATCH under u64::MAX).
+        #[clap(long, short = 's', action)]
+        small: bool,
+        /// Exit with non-zero status when the selected component is absent (optional components only).
+        #[clap(long, short = 'F', action)]
+        fail_if_not_found: bool,
+    },
 }
 
 fn main() -> Result<ExitOutcome, Box<dyn Error>> {
@@ -353,6 +395,12 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             bump_minor,
             bump_patch,
         } => bump(&semantic_version, bump_major, bump_minor, bump_patch)?.into(),
+        Commands::Select {
+            component,
+            version,
+            small,
+            fail_if_not_found,
+        } => select(version.as_str(), component, small, fail_if_not_found)?.into(),
     };
 
     match args.out {
@@ -424,12 +472,21 @@ fn bump(
     VersionMutationResult::bump(version, major, minor, patch)
 }
 
+fn select(
+    version: &str,
+    component: SemverComponent,
+    small: bool,
+    fail_if_not_found: bool,
+) -> Result<SelectResult, Box<dyn Error>> {
+    SelectResult::select(version, component.into(), small, fail_if_not_found)
+}
+
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
     use proptest_semver::*;
 
-    use crate::{SerializableOrdering, version_without_build_metadata};
+    use crate::{SemverComponent, SerializableOrdering, version_without_build_metadata};
 
     proptest! {
         //                 None of these tests do much more than ensure the
@@ -485,6 +542,19 @@ mod tests {
             // Not going to flex maxing out memory allocations here, limiting
             // to u8 testing.
             super::generate(small, count.into());
+        }
+
+        #[test]
+        fn select_small(version in arb_version(), component in prop_oneof![
+            Just(SemverComponent::Major),
+            Just(SemverComponent::Minor),
+            Just(SemverComponent::Patch),
+            Just(SemverComponent::PreRelease),
+            Just(SemverComponent::BuildMetadata),
+        ]) {
+            let result = super::select(&version.to_string(), component, true, false).unwrap();
+            // Just ensure we don't panic; optional components may be None
+            let _ = format!("{result}");
         }
     }
 }

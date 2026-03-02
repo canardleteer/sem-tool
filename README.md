@@ -180,6 +180,42 @@ $ sem-tool set 0.0.1 --set-patch 20
 mutated_version: 0.0.20
 ```
 
+### `select`
+
+Get a single component (major, minor, patch, pre-release, build-metadata) from a valid semantic version. By default uses the official semver regex (spec-compliant, supports any numeric size for MAJOR.MINOR.PATCH). Use `-s` / `--small` to parse with the semver crate (u64-bound).
+
+For optional components (pre-release, build-metadata), if the version has none, the command prints nothing and exits 0. Use `--fail-if-not-found` (or `-F`) to exit with a non-zero status when the component is absent.
+
+The `-o text` option prints only the component value (no YAML/JSON), which is useful for capturing into a variable in a script:
+
+```shell
+$ sem-tool select major 1.2.3
+---
+value: '1'
+
+$ sem-tool select pre-release 1.0.0-rc.1
+---
+value: rc.1
+
+$ sem-tool -o text select patch 2.0.4
+4
+
+# Capture into a variable in a script
+$ PATCH=$(sem-tool -o text select patch 1.2.3)
+$ echo "Patch component: $PATCH"
+Patch component: 4
+
+# Optional component absent: success, no output
+$ sem-tool select pre-release 1.0.0
+---
+{}
+
+# Optional component absent with --fail-if-not-found: non-zero exit
+$ sem-tool select pre-release 1.0.0 --fail-if-not-found
+$ echo $?
+1
+```
+
 ### `compare`
 
 - Versions, must have `MAJOR`, `MINOR`, `PATCH` components under `u64::MAX`.
