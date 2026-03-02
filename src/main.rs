@@ -21,6 +21,7 @@
 #![allow(rustdoc::bare_urls)]
 
 use clap::{Parser, Subcommand};
+use clap_mcp::ClapMcp;
 use semver::{Version, VersionReq};
 use std::error::Error;
 use std::io;
@@ -32,18 +33,23 @@ mod results;
 use misc::*;
 use results::*;
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, ClapMcp)]
+#[clap_mcp(skip_root_when_subcommands)]
 #[command(version, about, long_about = None)]
 pub struct Args {
     #[command(subcommand)]
     cmd: Commands,
 
+    #[clap_mcp(skip)]
     #[clap(long, short = 'o', value_enum, default_value_t=OutputFormat::Yaml)]
     out: OutputFormat,
 }
 
 /// All commands available
-#[derive(Subcommand, Debug, Clone)]
+#[derive(Subcommand, Debug, Clone, ClapMcp)]
+#[clap_mcp(reinvocation_safe, parallel_safe)]
+#[clap_mcp_output_from = "run"]
+#[clap_mcp_output_type = "McpToolOutput"]
 pub enum Commands {
     /// Explain a valid Semantic Version as parsed by the spec.
     ///
@@ -100,6 +106,7 @@ pub enum Commands {
     ///
     /// Results are grouped by default, under the meaningful components of Semantic
     /// Versioning (without build metadata), then enumerated under that component.
+    #[clap_mcp(requires = "versions")]
     Sort {
         #[clap(long, short = 'f', default_value = None)]
         /// Only emit versions that match a filter.
@@ -247,31 +254,41 @@ pub enum Commands {
 }
 
 fn main() -> Result<ExitOutcome, Box<dyn Error>> {
-    let args = Args::parse();
+    let args = clap_mcp::parse_or_serve_mcp_attr::<Args>();
 
-    let mut ignore_exit_status_from_output = false;
+    let cmd_clone = args.cmd.clone();
+    let result = run(args.cmd)?;
 
-    let result: SubcommandResult = match args.cmd {
+    let ignore_exit_status_from_output = match (&cmd_clone, &result) {
+        (
+            Commands::Compare {
+                set_exit_status,
+                semantic_exit_status,
+                ..
+            },
+            SubcommandResult::ComparisonStatement(c),
+        ) => {
+            !set_exit_status
+                || (*semantic_exit_status && c.semantic_ordering() == &SerializableOrdering::Equal)
+        }
+        _ => false,
+    };
+
+    print!("{}", args.out.format_result(&result)?);
+
+    Ok(ExitOutcome::new(result, ignore_exit_status_from_output))
+}
+
+/// Run a subcommand and produce a result. Used by both CLI and MCP.
+fn run(cmd: Commands) -> Result<SubcommandResult, ApplicationError> {
+    let result: SubcommandResult = match cmd {
         Commands::Explain { semantic_version } => explain(&semantic_version).into(),
         Commands::Compare {
-            set_exit_status,
-            semantic_exit_status,
+            set_exit_status: _,
+            semantic_exit_status: _,
             a,
             b,
-        } => {
-            // If we don't consider non-equivalence an error, don't report one
-            // on process exit.
-            if !set_exit_status {
-                ignore_exit_status_from_output = true;
-            }
-            let res = compare(&a, &b);
-
-            if semantic_exit_status && res.semantic_ordering() == &SerializableOrdering::Equal {
-                ignore_exit_status_from_output = true
-            }
-
-            res.into()
-        }
+        } => compare(&a, &b).into(),
         Commands::Sort {
             versions,
             filter,
@@ -282,7 +299,6 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
         } => {
             let mut parsed_versions = Vec::new();
 
-            // Read from stdin, or pass forward the pre-parsed list from the arguments
             match versions {
                 Some(versions) => parsed_versions = versions,
                 None => {
@@ -291,20 +307,18 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
                         match line {
                             Ok(line) => {
                                 let line = line.trim();
-                                parsed_versions.push(Version::parse(line)
-                                .map_err(|e| {
-                                    eprintln!("unable to parse an enumerated version: line {line_no}: {line}: {e}");
-                                    e
+                                parsed_versions.push(Version::parse(line).map_err(|e| {
+                                    ApplicationError::InvalidArgument {
+                                        expected: format!("valid semver at line {line_no}: {line}"),
+                                        found: e.to_string(),
+                                    }
                                 })?);
                                 Ok(())
                             }
-                            Err(e) => {
-                                eprintln!("unable to read from stdin: {e}");
-                                Err(ApplicationError::InvalidArgument {
-                                    expected: "to be able to read from stdin".to_string(),
-                                    found: e.to_string(),
-                                })
-                            }
+                            Err(e) => Err(ApplicationError::InvalidArgument {
+                                expected: "to be able to read from stdin".to_string(),
+                                found: e.to_string(),
+                            }),
                         }?
                     }
                 }
@@ -314,9 +328,9 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
                 sort(&mut parsed_versions, &filter, lexical_sorting, reverse);
 
             if fail_if_potentially_ambiguous && ordered_version_list.potentially_ambiguous() {
-                return Err(Box::new(misc::ApplicationError::FailedRequirementError {
+                return Err(ApplicationError::FailedRequirementError {
                     err: "Potential Ambiguity Detected".to_string(),
-                }));
+                });
             }
 
             if flatten {
@@ -345,32 +359,25 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             set_patch,
             set_pre_release,
             set_build_metadata,
-        )?
+        )
+        .map_err(|e| ApplicationError::InvalidArgument {
+            expected: "valid set operation".to_string(),
+            found: e.to_string(),
+        })?
         .into(),
         Commands::Bump {
             semantic_version,
             bump_major,
             bump_minor,
             bump_patch,
-        } => bump(&semantic_version, bump_major, bump_minor, bump_patch)?.into(),
+        } => bump(&semantic_version, bump_major, bump_minor, bump_patch)
+            .map_err(|e| ApplicationError::InvalidArgument {
+                expected: "valid bump operation".to_string(),
+                found: e.to_string(),
+            })?
+            .into(),
     };
-
-    match args.out {
-        OutputFormat::Text => print!("{result}"),
-        OutputFormat::Yaml => {
-            println!("---");
-            let yaml = serde_yaml::to_string(&result)
-                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-            print!("{yaml}");
-        }
-        OutputFormat::Json => {
-            let json = serde_json::to_string(&result)
-                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-            println!("{json}");
-        }
-    }
-
-    Ok(ExitOutcome::new(result, ignore_exit_status_from_output))
+    Ok(result)
 }
 
 fn sort(

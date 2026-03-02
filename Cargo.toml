@@ -63,6 +63,9 @@ serde_json = "1.0.138"
 #                     taken the time to figure out how to make it stop.
 serde_yaml = "0.9.34"
 
+clap-mcp = { version = "0.0.3-rc.1", features = ["output-schema"] }
+schemars = { version = "0.8", features = ["derive"] }
+
 [dev-dependencies]
 assert_cmd = "2.0.16"
 insta = { version = "1.42.1", features = ["json", "yaml"] }

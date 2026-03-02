@@ -26,11 +26,12 @@ use rand::prelude::*;
 use regex::Regex;
 use semver::{BuildMetadata, Prerelease, Version, VersionReq};
 use serde::Serialize;
+use schemars::JsonSchema;
 
 use super::regex::{generate_any_valid_semver, generate_u64_safe_semver};
 
 /// The result of a simple filter test.
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct ValidateResult {
     valid: bool,
 }
@@ -47,6 +48,11 @@ impl ValidateResult {
         };
 
         Self { valid: pass }
+    }
+
+    /// True if validation passed (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn success(&self) -> bool {
+        self.valid
     }
 }
 
@@ -71,7 +77,7 @@ impl Termination for ValidateResult {
 }
 
 /// The result of a simple filter test.
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct FilterTestResult {
     pass: bool,
 }
@@ -79,6 +85,11 @@ pub(crate) struct FilterTestResult {
 impl FilterTestResult {
     pub(crate) fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
         filter.matches(semantic_version).into()
+    }
+
+    /// True if filter matched (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn success(&self) -> bool {
+        self.pass
     }
 }
 
@@ -108,7 +119,7 @@ impl fmt::Display for FilterTestResult {
     }
 }
 
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
 pub(crate) enum SegmentType {
     Numeric,
     Ascii,
@@ -126,7 +137,7 @@ impl fmt::Display for SegmentType {
 /// Describes a dot separated segment of either a Pre-Release, or Build Metadata string.
 ///
 /// Kind describes how the value is meant to be interpreted for precedence.
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, JsonSchema, PartialEq)]
 pub(crate) struct PreMetaSegment {
     kind: SegmentType,
     value: String,
@@ -153,7 +164,7 @@ impl From<&str> for PreMetaSegment {
 }
 
 /// Descriptive information about a Version.
-#[derive(Clone, Serialize, PartialEq)]
+#[derive(Clone, Serialize, JsonSchema, PartialEq)]
 pub(crate) struct VersionExplanation {
     major: u64,
     minor: u64,
@@ -243,8 +254,9 @@ impl Termination for VersionExplanation {
 }
 
 /// A simple list of Versions.
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct FlatVersionsList {
+    #[schemars(with = "Vec<String>")]
     versions: Vec<Version>,
     potentially_ambiguous: bool,
 }
@@ -279,7 +291,7 @@ impl Termination for FlatVersionsList {
 /// A simple list of Strings.
 ///
 /// NOTE(canardleteer): Probably could become any serializable type with Display.
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct FlatStringList {
     versions: Vec<String>,
 }
@@ -308,8 +320,9 @@ impl Termination for FlatStringList {
 }
 
 /// A usefully ordered list of versions.
-#[derive(Serialize)]
+#[derive(Serialize, JsonSchema)]
 pub(crate) struct OrderedVersionMap {
+    #[schemars(rename = "versions", with = "std::collections::HashMap<String, Vec<String>>")]
     #[serde(rename(serialize = "versions"))]
     inner: IndexMap<Version, Vec<Version>>,
     potentially_ambiguous: bool,
@@ -403,7 +416,7 @@ impl Termination for OrderedVersionMap {
 }
 
 /// A statement about the comparison about 2 versions
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct ComparisonStatement {
     semantic_ordering: SerializableOrdering,
     lexical_ordering: SerializableOrdering,
@@ -428,9 +441,15 @@ impl ComparisonStatement {
     pub(crate) fn lexical_ordering(&self) -> &SerializableOrdering {
         &self.lexical_ordering
     }
+
+    /// True when both semantic and lexical orderings are Equal (exit-code success). Used for MCP explicit success wrapper.
+    pub(crate) fn both_equal(&self) -> bool {
+        *self.semantic_ordering() == SerializableOrdering::Equal
+            && *self.lexical_ordering() == SerializableOrdering::Equal
+    }
 }
 
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct GenerateResult {
     inner: Vec<String>,
 }
@@ -459,8 +478,9 @@ impl fmt::Display for GenerateResult {
     }
 }
 
-#[derive(Serialize, PartialEq)]
+#[derive(Serialize, JsonSchema, PartialEq)]
 pub(crate) struct VersionMutationResult {
+    #[schemars(with = "String")]
     pub(crate) mutated_version: Version,
 }
 
@@ -625,7 +645,7 @@ impl fmt::Display for ComparisonStatement {
 }
 
 /// Just a small reimplementation of std::Ordering with Serialization.
-#[derive(Debug, Serialize, PartialEq)]
+#[derive(Debug, Serialize, JsonSchema, PartialEq)]
 pub(crate) enum SerializableOrdering {
     Less,
     Greater,
