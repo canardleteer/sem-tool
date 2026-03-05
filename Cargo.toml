@@ -38,6 +38,7 @@ eula = false
 rand = { version = "0.9.0", features = [ "std_rng" ] }
 clap = { version = "4.5", features = ["derive"] }
 clap_derive = "4.5.28"
+clap_mcp = { git = "https://github.com/canardleteer/clap-mcp", branch = "dev/canardleteer/extra-mcp-features", package = "clap-mcp" }
 indexmap = { version = "2.7.1", features= ["serde"] }
 semver = { version = "1.0.25", features= ["serde"] }
 thiserror = "2.0.11"
@@ -62,8 +63,6 @@ serde_json = "1.0.138"
 #                     harder to use with common tools like `yq`, and I haven't
 #                     taken the time to figure out how to make it stop.
 serde_yaml = "0.9.34"
-
-clap-mcp = { git = "https://github.com/canardleteer/clap-mcp", branch = "dev/canardleteer/reorg" }
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
