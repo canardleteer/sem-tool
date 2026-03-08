@@ -1,0 +1,27 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - set
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Set commands will replace one segment of semver, with a specified one, and print out the mutated version
+
+Usage: sem-tool set [OPTIONS] <SEMANTIC_VERSION>
+
+Arguments:
+  <SEMANTIC_VERSION>  
+
+Options:
+      --set-major <SET_MAJOR>                    
+      --set-minor <SET_MINOR>                    
+      --set-patch <SET_PATCH>                    
+      --set-pre-release <SET_PRE_RELEASE>        
+      --set-build-metadata <SET_BUILD_METADATA>  
+  -h, --help                                     Print help
+
+----- stderr -----

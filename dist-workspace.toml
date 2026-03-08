@@ -1,5 +1,5 @@
 [workspace]
-members = ["cargo:."]
+members = ["cargo:.", "cargo:sem-tool-mcp"]
 
 # Config for 'dist'
 [dist]

@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: Apache-2.0
+# Copyright 2025 canardleteer
+#
+# Optional MCP-enabled binary for distribution only. Not published to crates.io.
+
+[package]
+name = "sem-tool-mcp"
+version = "0.1.10"
+edition = "2024"
+publish = false
+description = "sem-tool with MCP server support (distribution binary only)"
+
+[dependencies]
+sem-tool = { path = "..", features = ["mcp"] }

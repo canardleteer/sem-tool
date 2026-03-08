@@ -14,4 +14,4 @@ exit_code: 1
 ----- stdout -----
 
 ----- stderr -----
-Error: FailedRequirementError { err: "Potential Ambiguity Detected" }
+Failed a requirement "Potential Ambiguity Detected"

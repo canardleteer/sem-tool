@@ -1,0 +1,69 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - sort
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Sort a list of valid Semantic Versions, with either Semantic or Lexical ordering.
+
+Results are grouped by default, under the meaningful components of Semantic Versioning (without build metadata), then enumerated under that component.
+
+Usage: sem-tool sort [OPTIONS] [VERSIONS]...
+
+Arguments:
+  [VERSIONS]...
+          If no versions are present, then the tool will read from stdin, one version per line
+
+Options:
+  -f, --filter <FILTER>
+          Only emit versions that match a filter.
+          
+          These filter rules are described by the semver crate `VersionReq` documentation, and more generally in the cargo book.
+          
+          In particular, note the warnings around pre-releases in the VersionReq documentation.
+          
+          References: - https://docs.rs/semver/1.0.25/semver/struct.VersionReq.html - https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+
+      --lexical-sorting
+          Lexical Sorting (aka Total Order).
+          
+          WARNING: This may lead to bad choices surrounding semantic versioning.
+          
+          Semver 2.0.0 §10 states that: "Build metadata MUST be ignored when determining version precedence."
+          
+          This has been set to the default behavior of emulating undefined behavior, because it MUST be ignored. It is quite common, for people to accidentally choose the sorting order of their favorite or most familiar tool, and not the specification itself.
+          
+          Additionally, we must interpret the following statement as undefined ordering for the case where Build Metadata may be `None` or `Some`:
+          
+          "Thus two versions that differ only in the build metadata, have the same precedence."
+          
+          References: - https://semver.org/#spec-item-10
+
+  -r, --reverse
+          Reverses ordering.
+          
+          Note, "reversing" always effects the comparable versions being ordered, but is ignored when NOT lexically sorted, for the list of semantically identical versions (aka, different metadata). Since by default they are randomly sorted, there is no point.
+
+      --flatten
+          Flatten the map, and provide a list of versions.
+          
+          WARNING: This may lead to bad choices surrounding semantic versioning.
+
+      --fail-if-potentially-ambiguous
+          Fail, if potentially ambiguous precedence may emerge from these versions (multiple matching M.M.P-PR, but non-matching metadata)
+
+      --mcp
+          Run an MCP server over stdio that exposes this CLI's clap schema
+
+      --export-skills <DIR>
+          Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

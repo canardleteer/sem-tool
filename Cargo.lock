@@ -532,6 +532,7 @@ checksum = "e82db8c87c7f1ccecb34ce0c24399b8a73081427f3c7c50a5d597925356115e4"
 dependencies = [
  "console",
  "once_cell",
+ "regex",
  "serde",
  "similar",
  "tempfile",
@@ -1038,6 +1039,13 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "thiserror",
+]
+
+[[package]]
+name = "sem-tool-mcp"
+version = "0.1.10"
+dependencies = [
+ "sem-tool",
 ]
 
 [[package]]

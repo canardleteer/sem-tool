@@ -1,9 +1,7 @@
 //! SPDX-License-Identifier: Apache-2.0
 //! Copyright 2025 canardleteer
 //!
-//! Binary entrypoint for sem-tool; delegates to the library.
-
-#![allow(rustdoc::bare_urls)]
+//! Binary entrypoint for sem-tool-mcp; delegates to sem-tool with MCP feature.
 
 fn main() -> std::process::ExitCode {
     match sem_tool::run_app() {
