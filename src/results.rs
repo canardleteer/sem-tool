@@ -24,6 +24,8 @@ use std::{
 use indexmap::IndexMap;
 use rand::prelude::*;
 use regex::Regex;
+#[cfg(feature = "mcp")]
+use schemars::JsonSchema;
 use semver::{BuildMetadata, Prerelease, Version, VersionReq};
 use serde::Serialize;
 
@@ -31,6 +33,7 @@ use super::regex::{generate_any_valid_semver, generate_u64_safe_semver};
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct ValidateResult {
     valid: bool,
 }
@@ -47,6 +50,12 @@ impl ValidateResult {
         };
 
         Self { valid: pass }
+    }
+
+    /// True if validation passed (exit-code success). Used for MCP explicit success wrapper.
+    #[cfg_attr(not(feature = "mcp"), allow(dead_code))]
+    pub(crate) fn success(&self) -> bool {
+        self.valid
     }
 }
 
@@ -72,6 +81,7 @@ impl Termination for ValidateResult {
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct FilterTestResult {
     pass: bool,
 }
@@ -79,6 +89,12 @@ pub(crate) struct FilterTestResult {
 impl FilterTestResult {
     pub(crate) fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
         filter.matches(semantic_version).into()
+    }
+
+    /// True if filter matched (exit-code success). Used for MCP explicit success wrapper.
+    #[cfg_attr(not(feature = "mcp"), allow(dead_code))]
+    pub(crate) fn success(&self) -> bool {
+        self.pass
     }
 }
 
@@ -109,6 +125,7 @@ impl fmt::Display for FilterTestResult {
 }
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) enum SegmentType {
     Numeric,
     Ascii,
@@ -127,6 +144,7 @@ impl fmt::Display for SegmentType {
 ///
 /// Kind describes how the value is meant to be interpreted for precedence.
 #[derive(Clone, Debug, Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct PreMetaSegment {
     kind: SegmentType,
     value: String,
@@ -154,6 +172,7 @@ impl From<&str> for PreMetaSegment {
 
 /// Descriptive information about a Version.
 #[derive(Clone, Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct VersionExplanation {
     major: u64,
     minor: u64,
@@ -244,7 +263,9 @@ impl Termination for VersionExplanation {
 
 /// A simple list of Versions.
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct FlatVersionsList {
+    #[cfg_attr(feature = "mcp", schemars(with = "Vec<String>"))]
     versions: Vec<Version>,
     potentially_ambiguous: bool,
 }
@@ -280,6 +301,7 @@ impl Termination for FlatVersionsList {
 ///
 /// NOTE(canardleteer): Probably could become any serializable type with Display.
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct FlatStringList {
     versions: Vec<String>,
 }
@@ -309,7 +331,15 @@ impl Termination for FlatStringList {
 
 /// A usefully ordered list of versions.
 #[derive(Serialize)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct OrderedVersionMap {
+    #[cfg_attr(
+        feature = "mcp",
+        schemars(
+            rename = "versions",
+            with = "std::collections::HashMap<String, Vec<String>>"
+        )
+    )]
     #[serde(rename(serialize = "versions"))]
     inner: IndexMap<Version, Vec<Version>>,
     potentially_ambiguous: bool,
@@ -404,6 +434,7 @@ impl Termination for OrderedVersionMap {
 
 /// A statement about the comparison about 2 versions
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct ComparisonStatement {
     semantic_ordering: SerializableOrdering,
     lexical_ordering: SerializableOrdering,
@@ -428,9 +459,17 @@ impl ComparisonStatement {
     pub(crate) fn lexical_ordering(&self) -> &SerializableOrdering {
         &self.lexical_ordering
     }
+
+    /// True when both semantic and lexical orderings are Equal (exit-code success). Used for MCP explicit success wrapper.
+    #[cfg_attr(not(feature = "mcp"), allow(dead_code))]
+    pub(crate) fn both_equal(&self) -> bool {
+        *self.semantic_ordering() == SerializableOrdering::Equal
+            && *self.lexical_ordering() == SerializableOrdering::Equal
+    }
 }
 
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct GenerateResult {
     inner: Vec<String>,
 }
@@ -460,7 +499,9 @@ impl fmt::Display for GenerateResult {
 }
 
 #[derive(Serialize, PartialEq)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 pub(crate) struct VersionMutationResult {
+    #[cfg_attr(feature = "mcp", schemars(with = "String"))]
     pub(crate) mutated_version: Version,
 }
 
@@ -626,7 +667,8 @@ impl fmt::Display for ComparisonStatement {
 
 /// Just a small reimplementation of std::Ordering with Serialization.
 #[derive(Debug, Serialize, PartialEq)]
-pub(crate) enum SerializableOrdering {
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
+pub enum SerializableOrdering {
     Less,
     Greater,
     Equal,
@@ -652,7 +694,7 @@ impl From<Ordering> for SerializableOrdering {
     }
 }
 
-pub(crate) fn version_without_build_metadata(version: &Version) -> Version {
+pub fn version_without_build_metadata(version: &Version) -> Version {
     Version {
         major: version.major,
         minor: version.minor,

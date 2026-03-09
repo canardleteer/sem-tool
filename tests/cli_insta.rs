@@ -22,10 +22,31 @@ fn cli() -> Command {
     Command::new(get_cargo_bin("sem-tool"))
 }
 
+/// When set (e.g. in CI for the mcp feature job), skip the default insta test so we don't
+/// compare against default-feature snapshots. The mcp binary has different --help (e.g. --mcp,
+/// --export-skills) and possibly other divergence.
+fn skip_default_insta() -> bool {
+    std::env::var("SEM_TOOL_SKIP_INSTA").unwrap_or_default() == "1"
+}
+
 #[test]
 fn cli_insta() {
+    if skip_default_insta() {
+        return;
+    }
     // Giant map of various tests for insta.
     let mut insta_targets = HashMap::new();
+
+    // --help for root and each subcommand (snapshot CLI help text)
+    insta_targets.insert("help.root", vec!["--help"]);
+    insta_targets.insert("help.explain", vec![COMMAND_EXPLAIN, "--help"]);
+    insta_targets.insert("help.compare", vec![COMMAND_COMPARE, "--help"]);
+    insta_targets.insert("help.sort", vec![COMMAND_SORT, "--help"]);
+    insta_targets.insert("help.filter-test", vec![COMMAND_FILTER_TEST, "--help"]);
+    insta_targets.insert("help.validate", vec![COMMAND_VALIDATE, "--help"]);
+    insta_targets.insert("help.generate", vec![COMMAND_GENERATE, "--help"]);
+    insta_targets.insert("help.set", vec![COMMAND_SET, "--help"]);
+    insta_targets.insert("help.bump", vec![COMMAND_BUMP, "--help"]);
 
     // Filter Tests
     insta_targets.insert(
@@ -188,6 +209,42 @@ fn cli_insta() {
     insta_targets.insert("set.simple.2", vec![COMMAND_SET, "1.1.1", "--set-major=20"]);
 
     for (key, args) in insta_targets.iter() {
-        assert_cmd_snapshot!(*key, cli().args(args));
+        insta::with_settings!({
+            filters => vec![
+                (r"sem-tool\.exe", "sem-tool"),
+            ]
+        }, {
+            assert_cmd_snapshot!(*key, cli().args(args));
+        });
+    }
+}
+
+/// Snapshots --help output for the MCP-enabled binary. Run with `SEM_TOOL_MCP_HELP=1` when
+/// testing the `mcp` feature build so we have separate snapshots (mcp adds --mcp, --export-skills,
+/// etc.). In CI the mcp job sets both SEM_TOOL_SKIP_INSTA and SEM_TOOL_MCP_HELP.
+#[test]
+fn cli_insta_mcp_help() {
+    if std::env::var("SEM_TOOL_MCP_HELP").unwrap_or_default() != "1" {
+        return;
+    }
+    let help_cases = [
+        ("help_mcp.root", vec!["--help"]),
+        ("help_mcp.explain", vec![COMMAND_EXPLAIN, "--help"]),
+        ("help_mcp.compare", vec![COMMAND_COMPARE, "--help"]),
+        ("help_mcp.sort", vec![COMMAND_SORT, "--help"]),
+        ("help_mcp.filter-test", vec![COMMAND_FILTER_TEST, "--help"]),
+        ("help_mcp.validate", vec![COMMAND_VALIDATE, "--help"]),
+        ("help_mcp.generate", vec![COMMAND_GENERATE, "--help"]),
+        ("help_mcp.set", vec![COMMAND_SET, "--help"]),
+        ("help_mcp.bump", vec![COMMAND_BUMP, "--help"]),
+    ];
+    for (name, args) in help_cases {
+        insta::with_settings!({
+            filters => vec![
+                (r"sem-tool\.exe", "sem-tool"),
+            ]
+        }, {
+            assert_cmd_snapshot!(name, cli().args(args));
+        });
     }
 }

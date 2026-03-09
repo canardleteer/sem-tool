@@ -1,0 +1,33 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+A simple Semantic Versioning CLI tool for parsing, filtering, sorting and explaining
+
+Usage: sem-tool [OPTIONS] <COMMAND>
+
+Commands:
+  explain      Explain a valid Semantic Version as parsed by the spec
+  compare      Compare 2 Semantic Versions
+  sort         Sort a list of valid Semantic Versions, with either Semantic or Lexical ordering
+  filter-test  Test a Semantic Version against a filter
+  validate     Simply validates an argument, to confirm it is a valid Semantic Version
+  generate     Generate random & valid Semantic Version Strings. They may be large and awkward, but valid Semantic Versions. Useful for testing and validation
+  set          Set commands will replace one segment of semver, with a specified one, and print out the mutated version
+  bump         Bump commands will increment one segment of semver by the specified amount, and print out the mutated version
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -o, --out <OUT>            Output format (yaml, text, json) [default: yaml] [possible values: text, yaml, json]
+      --mcp                  Run an MCP server over stdio that exposes this CLI's clap schema
+      --export-skills <DIR>  Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+  -h, --help                 Print help
+  -V, --version              Print version
+
+----- stderr -----

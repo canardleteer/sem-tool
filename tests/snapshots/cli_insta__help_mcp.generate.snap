@@ -1,0 +1,25 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - generate
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Generate random & valid Semantic Version Strings. They may be large and awkward, but valid Semantic Versions. Useful for testing and validation
+
+Usage: sem-tool generate [OPTIONS] [COUNT]
+
+Arguments:
+  [COUNT]  How many to create (default 1) [default: 1]
+
+Options:
+  -s, --small                "Small" will ensure the MAJOR, MINOR & PATCH components are under [u64::MAX]
+      --mcp                  Run an MCP server over stdio that exposes this CLI's clap schema
+      --export-skills <DIR>  Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+  -h, --help                 Print help
+
+----- stderr -----

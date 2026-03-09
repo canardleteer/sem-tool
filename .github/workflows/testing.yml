@@ -8,6 +8,7 @@ jobs:
     strategy:
       matrix:
         platform: [macos-latest, ubuntu-latest, windows-latest]
+        features: [default, mcp]
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -20,7 +21,7 @@ jobs:
         with:
           path: |
             ~/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.features }}
 
     #   - name: Setup pnpm
     #     uses: pnpm/action-setup@v2
@@ -38,8 +39,12 @@ jobs:
 
       - name: Run test suite
         working-directory: ./
-        run: cargo test
-
+        run: cargo test ${{ matrix.features == 'mcp' && '--features mcp' || '' }}
+        env:
+          # When testing the mcp feature build, skip default insta snapshots (help/output
+          # diverges due to --mcp, --export-skills, etc.) and run mcp-specific help snapshots instead.
+          SEM_TOOL_SKIP_INSTA: ${{ matrix.features == 'mcp' && '1' || '' }}
+          SEM_TOOL_MCP_HELP: ${{ matrix.features == 'mcp' && '1' || '' }}
       - name: Do a simple build
         working-directory: ./
-        run: cargo build
+        run: cargo build ${{ matrix.features == 'mcp' && '--features mcp' || '' }}

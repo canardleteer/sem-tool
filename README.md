@@ -48,8 +48,15 @@ interpretation.
 cargo install sem-tool
 ```
 
-- [Releases](https://github.com/canardleteer/sem-tool/releases) have various installer
-  patterns for multiple Operating Systems and Package Management tools.
+This installs the CLI only (no MCP server support). To enable **MCP** (Model Context Protocol) server mode (e.g. `--mcp` / `--export-skills`), install with the optional feature:
+
+```shell
+cargo install sem-tool --features mcp
+```
+
+The `mcp` feature is **experimental** and is not enabled by default.
+
+- [Releases](https://github.com/canardleteer/sem-tool/releases) provide installers and binaries for multiple operating systems. The **sem-tool-mcp** binary (MCP-enabled) is also published there for each release if you prefer a pre-built MCP build instead of `cargo install sem-tool --features mcp`.
 
 ## Running
 
@@ -57,6 +64,28 @@ Your best place to start, is:
 
 ```shell
 sem-tool --help
+```
+
+## Testing
+
+To run the same test coverage as CI locally:
+
+1. **Default build** (no MCP):
+
+   ```shell
+   cargo test
+   ```
+
+2. **MCP feature build** (uses separate help snapshots; same env as CI):
+
+   ```shell
+   SEM_TOOL_SKIP_INSTA=1 SEM_TOOL_MCP_HELP=1 cargo test --features mcp
+   ```
+
+To regenerate MCP help snapshots after changing CLI help or the `mcp` feature:
+
+```shell
+SEM_TOOL_SKIP_INSTA=1 SEM_TOOL_MCP_HELP=1 INSTA_UPDATE=1 cargo test --features mcp --test cli_insta
 ```
 
 ## Output
