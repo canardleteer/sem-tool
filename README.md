@@ -65,7 +65,8 @@ Currently, the following output types are: `yaml`, `text`, `json`.
 
 I favor the `yaml` output, and have made that the default.
 
-Exit Status is available either by default in obvious cases, or by flag in less obvious cases.
+Exit Status is available either by default in obvious cases, or by flag in less
+obvious cases.
 
 ## Subcommands
 
@@ -93,7 +94,8 @@ $ echo $?
 
 ### `validate`
 
-The `validate` subcommand just helps a script determine if a string is a valid Semantic Version or not.
+The `validate` subcommand just helps a script determine if a string is a valid
+Semantic Version or not.
 
 ```shell
 # Passing test
@@ -182,11 +184,17 @@ mutated_version: 0.0.20
 
 ### `select`
 
-Get a single component (major, minor, patch, pre-release, build-metadata) from a valid semantic version. By default uses the official semver regex (spec-compliant, supports any numeric size for MAJOR.MINOR.PATCH). Use `-s` / `--small` to parse with the semver crate (u64-bound).
+Get a single component (major, minor, patch, pre-release, build-metadata) from a
+valid semantic version. By default uses the official semver regex
+(spec-compliant, supports any numeric size for MAJOR.MINOR.PATCH). Use `-s` /
+`--small` to parse with the semver crate (u64-bound).
 
-For optional components (pre-release, build-metadata), if the version has none, the command prints nothing and exits 0. Use `--fail-if-not-found` (or `-F`) to exit with a non-zero status when the component is absent.
+For optional components (pre-release, build-metadata), if the version has none,
+the command prints nothing and exits 0. Use `--fail-if-not-found` (or `-F`) to
+exit with a non-zero status when the component is absent.
 
-The `-o text` option prints only the component value (no YAML/JSON), which is useful for capturing into a variable in a script:
+The `-o text` option prints only the component value (no YAML/JSON), which is
+useful for capturing into a variable in a script:
 
 ```shell
 $ sem-tool select major 1.2.3
@@ -417,6 +425,28 @@ $ sem-tool -o text generate -s 2
 # Dogfooding example.
 $ sem-tool -o text generate -s 1000 | sem-tool sort
 ```
+
+## Contributing
+
+Pull requests are welcome. The repo pins a stable Rust toolchain in
+`rust-toolchain.toml`; `rustup` will pick that up automatically when you run
+`cargo` in this directory.
+
+Before opening a PR, run the same checks as CI, plus markdown linting:
+
+```shell
+cargo check
+cargo fmt --all -- --check
+cargo clippy --all-targets -- -D warnings
+cargo test
+cargo build
+rumdl check .
+```
+
+CI runs the Rust checks on macOS, Linux, and Windows; markdown linting runs
+on Linux only via the [official rumdl action](https://rumdl.dev/usage/ci-cd/).
+Install [rumdl](https://github.com/rvben/rumdl) locally if you do not already
+have it (`cargo install rumdl --version ^0.2`).
 
 ## Todo
 
