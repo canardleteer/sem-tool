@@ -447,4 +447,3 @@ $ sem-tool -o text generate -s 1000 | sem-tool sort
 - [X] Regex Validate
 - [X] Generate random semantic version lists for helping build tests
 - [X] Github Actions + release-plz
-  
