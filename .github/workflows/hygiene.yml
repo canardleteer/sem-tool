@@ -4,6 +4,7 @@ name: "Code Hygiene Suite"
 
 env:
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+    RUMDL_VERSION: "0.2.2"
 
 jobs:
   hygiene:
@@ -42,3 +43,16 @@ jobs:
 
     - name: cargo clippy
       run: cargo clippy --all-targets -- -D warnings
+
+  rumdl:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: true
+
+    - uses: rvben/rumdl@v0
+      with:
+        version: ${{ env.RUMDL_VERSION }}
+        config: .rumdl.toml
