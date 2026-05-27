@@ -44,6 +44,30 @@ jobs:
     - name: cargo clippy
       run: cargo clippy --all-targets -- -D warnings
 
+  dist-config:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        submodules: true
+
+    - name: rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-dist
+      shell: bash
+      run: |
+        version=$(sed -n 's/^cargo-dist-version = "\(.*\)"/\1/p' dist-workspace.toml)
+        curl --proto '=https' --tlsv1.2 -LsSf \
+          "https://github.com/axodotdev/cargo-dist/releases/download/v${version}/cargo-dist-installer.sh" | sh
+
+    - name: Validate dist workspace config
+      run: |
+        dist plan
+        dist generate --mode msi --check
+        dist generate --mode ci --check --allow-dirty
+
   rumdl:
     runs-on: ubuntu-latest
 
