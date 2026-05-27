@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11](https://github.com/canardleteer/sem-tool/compare/v0.1.10...v0.1.11) - 2026-05-27
+
+### Added
+
+- sem-tool select functionality to capture semver components
+
+### Fixed
+
+- reduce type erasure
+
+### Other
+
+- hygiene check on dist-workspace config
+- update cargo & ci deps
+- README reformatting for rumdl
+- add rumdl linting and config
+- clean up some stray longlines
+- *(deps)* bump actions/upload-artifact from 6 to 7
+- *(deps)* bump actions/download-artifact from 7 to 8
+
 ## [0.1.10](https://github.com/canardleteer/sem-tool/compare/v0.1.9...v0.1.10) - 2026-01-05
 
 ### Added
