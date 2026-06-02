@@ -4,7 +4,6 @@ name: "Code Hygiene Suite"
 
 env:
     CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
-    RUMDL_VERSION: "0.2.2"
 
 jobs:
   hygiene:
@@ -76,9 +75,9 @@ jobs:
       with:
         submodules: true
 
-    # https://rumdl.dev/usage/ci-cd/ — pin both the action tag (@v0.2.2) and
-    # `version` input; @v0 tracks the latest action release, not the rumdl binary.
+    # https://rumdl.dev/usage/ci-cd/ — pin both the action tag, which 
+    # aligns with the rumdl version
+
     - uses: rvben/rumdl@v0.2.4
       with:
-        version: ${{ env.RUMDL_VERSION }}
         config: .rumdl.toml
