@@ -78,7 +78,7 @@ jobs:
 
     # https://rumdl.dev/usage/ci-cd/ — pin both the action tag (@v0.2.2) and
     # `version` input; @v0 tracks the latest action release, not the rumdl binary.
-    - uses: rvben/rumdl@v0.2.2
+    - uses: rvben/rumdl@v0.2.4
       with:
         version: ${{ env.RUMDL_VERSION }}
         config: .rumdl.toml
