@@ -48,8 +48,42 @@ interpretation.
 cargo install sem-tool
 ```
 
-- [Releases](https://github.com/canardleteer/sem-tool/releases) have various installer
-  patterns for multiple Operating Systems and Package Management tools.
+This installs the CLI only (no MCP server support). To enable **MCP** (Model Context Protocol) server mode (e.g. `--mcp`, `--mcp-http`, or `--export-skills`), install with the optional feature:
+
+```shell
+cargo install sem-tool --features mcp
+```
+
+The `mcp` feature is **experimental** and is not enabled by default.
+
+- [Releases](https://github.com/canardleteer/sem-tool/releases) provide installers and binaries for multiple operating systems. The **sem-tool-mcp** binary (MCP-enabled) is also published there for each release if you prefer a pre-built MCP build instead of `cargo install sem-tool --features mcp`.
+
+### MCP server mode
+
+With the `mcp` feature enabled, sem-tool can run as an MCP server exposing each subcommand as a tool.
+
+**Stdio** (default MCP transport):
+
+```shell
+sem-tool-mcp --mcp
+```
+
+**Streamable HTTP** (bind address required; `--mcp` and `--mcp-http` are mutually exclusive):
+
+```shell
+sem-tool-mcp --mcp-http 127.0.0.1:8080
+```
+
+The HTTP endpoint is served at `/mcp`. You can also configure the listen address with environment variables (see [clap-mcp HTTP docs](https://github.com/canardleteer/clap-mcp/blob/dev/canardleteer/rmcp-port/docs/http.md)):
+
+- `CLAP_MCP_HTTP_LISTEN` or `CLAP_MCP_HTTP_BIND` — host or `host:port`
+- `CLAP_MCP_HTTP_PORT` — port when only a host is given in the bind variable
+
+Export Cursor Agent Skills from the tool definitions:
+
+```shell
+sem-tool-mcp --export-skills ./skills
+```
 
 ## Running
 
@@ -59,14 +93,35 @@ Your best place to start, is:
 sem-tool --help
 ```
 
+## Testing
+
+To run the same test coverage as CI locally:
+
+1. **Default build** (no MCP):
+
+   ```shell
+   cargo test
+   ```
+
+2. **MCP feature build** (uses separate help snapshots; same env as CI):
+
+   ```shell
+   SEM_TOOL_SKIP_INSTA=1 SEM_TOOL_MCP_HELP=1 cargo test --features mcp
+   ```
+
+To regenerate MCP help snapshots after changing CLI help or the `mcp` feature:
+
+```shell
+SEM_TOOL_SKIP_INSTA=1 SEM_TOOL_MCP_HELP=1 INSTA_UPDATE=1 cargo test --features mcp --test cli_insta
+```
+
 ## Output
 
 Currently, the following output types are: `yaml`, `text`, `json`.
 
 I favor the `yaml` output, and have made that the default.
 
-Exit Status is available either by default in obvious cases, or by flag in less
-obvious cases.
+Exit Status is available either by default in obvious cases, or by flag in less obvious cases.
 
 ## Subcommands
 
@@ -78,14 +133,14 @@ The `filter-test` subcommand will allow you to test a filter on a version.
 
 ```shell
 # Passing test
-$ sem-tool filter-test ">=1.0.3" 1.0.3
+$ sem-tool filter-test --filter ">=1.0.3" --semantic-version 1.0.3
 ---
 pass: true
 $ echo $?
 0
 
 # Failing test
-$ sem-tool filter-test ">=1.0.3" 1.0.1
+$ sem-tool filter-test --filter ">=1.0.3" --semantic-version 1.0.1
 ---
 pass: false
 $ echo $?
@@ -94,8 +149,7 @@ $ echo $?
 
 ### `validate`
 
-The `validate` subcommand just helps a script determine if a string is a valid
-Semantic Version or not.
+The `validate` subcommand just helps a script determine if a string is a valid Semantic Version or not.
 
 ```shell
 # Passing test
@@ -182,55 +236,13 @@ $ sem-tool set 0.0.1 --set-patch 20
 mutated_version: 0.0.20
 ```
 
-### `select`
-
-Get a single component (major, minor, patch, pre-release, build-metadata) from a
-valid semantic version. By default uses the official semver regex
-(spec-compliant, supports any numeric size for MAJOR.MINOR.PATCH). Use `-s` /
-`--small` to parse with the semver crate (u64-bound).
-
-For optional components (pre-release, build-metadata), if the version has none,
-the command prints nothing and exits 0. Use `--fail-if-not-found` (or `-F`) to
-exit with a non-zero status when the component is absent.
-
-The `-o text` option prints only the component value (no YAML/JSON), which is
-useful for capturing into a variable in a script:
-
-```shell
-$ sem-tool select major 1.2.3
----
-value: '1'
-
-$ sem-tool select pre-release 1.0.0-rc.1
----
-value: rc.1
-
-$ sem-tool -o text select patch 2.0.4
-4
-
-# Capture into a variable in a script
-$ PATCH=$(sem-tool -o text select patch 1.2.3)
-$ echo "Patch component: $PATCH"
-Patch component: 4
-
-# Optional component absent: success, no output
-$ sem-tool select pre-release 1.0.0
----
-{}
-
-# Optional component absent with --fail-if-not-found: non-zero exit
-$ sem-tool select pre-release 1.0.0 --fail-if-not-found
-$ echo $?
-1
-```
-
 ### `compare`
 
 - Versions, must have `MAJOR`, `MINOR`, `PATCH` components under `u64::MAX`.
 
 ```shell
 # simple case
-$ sem-tool compare 1.2.3 2.2.2
+$ sem-tool compare --a 1.2.3 --b 2.2.2
 ---
 semantic_ordering: Less
 lexical_ordering: Less
@@ -238,7 +250,7 @@ $ echo $?
 0
 
 # simple case with status code reporting enabled
-$ sem-tool compare -e 1.2.3 2.2.2
+$ sem-tool compare -e --a 1.2.3 --b 2.2.2
 ---
 semantic_ordering: Less
 lexical_ordering: Less
@@ -246,7 +258,7 @@ $ echo $?
 100
 
 # comparing 2 "equal" versions
-$ sem-tool compare 2.2.2+abc 2.2.2
+$ sem-tool compare --a 2.2.2+abc --b 2.2.2
 ---
 semantic_ordering: Equal
 lexical_ordering: Greater
@@ -254,14 +266,14 @@ $ echo $?
 0
 
 # comparing 2 "equal" versions with status code reporting enabled
-$ sem-tool compare -e 2.2.2+abc 2.2.2
+$ sem-tool compare -e --a 2.2.2+abc --b 2.2.2
 ---
 semantic_ordering: Equal
 lexical_ordering: Greater
 $ echo $?
 112
 
-$ sem-tool compare -es 2.2.2+abc 2.2.2
+$ sem-tool compare -es --a 2.2.2+abc --b 2.2.2
 ---
 semantic_ordering: Equal
 lexical_ordering: Greater
@@ -426,28 +438,6 @@ $ sem-tool -o text generate -s 2
 $ sem-tool -o text generate -s 1000 | sem-tool sort
 ```
 
-## Contributing
-
-Pull requests are welcome. The repo pins a stable Rust toolchain in
-`rust-toolchain.toml`; `rustup` will pick that up automatically when you run
-`cargo` in this directory.
-
-Before opening a PR, run the same checks as CI, plus markdown linting:
-
-```shell
-cargo check
-cargo fmt --all -- --check
-cargo clippy --all-targets -- -D warnings
-cargo test
-cargo build
-rumdl check .
-```
-
-CI runs the Rust checks on macOS, Linux, and Windows; markdown linting runs
-on Linux only via the [official rumdl action](https://rumdl.dev/usage/ci-cd/).
-Install [rumdl](https://github.com/rvben/rumdl) locally if you do not already
-have it (`cargo install rumdl --version ^0.2`).
-
 ## Todo
 
 - [X] Simple `validate` command.
@@ -477,3 +467,4 @@ have it (`cargo install rumdl --version ^0.2`).
 - [X] Regex Validate
 - [X] Generate random semantic version lists for helping build tests
 - [X] Github Actions + release-plz
+  

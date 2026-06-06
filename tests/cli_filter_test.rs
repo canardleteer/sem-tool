@@ -18,29 +18,25 @@ use proptest_semver::*;
 mod common;
 use common::subcommands::*;
 
-use crate::common::common_cmd;
+use crate::common::{common_cmd, filter_test_cmd};
 
 #[test]
 fn cli_filter_invalid_input() {
-    let assert = common_cmd().arg(COMMAND_FILTER_TEST).arg(">a.b.c").assert();
+    let assert = common_cmd()
+        .arg(COMMAND_FILTER_TEST)
+        .arg("--filter")
+        .arg(">a.b.c")
+        .assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "1 bad semver filter arg")
         .failure();
 
-    let assert = common_cmd()
-        .arg(COMMAND_FILTER_TEST)
-        .arg(">1")
-        .arg("x.y.z")
-        .assert();
+    let assert = filter_test_cmd(">1", "x.y.z").assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "1 bad semver arg")
         .failure();
 
-    let assert = common_cmd()
-        .arg(COMMAND_FILTER_TEST)
-        .arg("2.0.0")
-        .arg(">1")
-        .assert();
+    let assert = filter_test_cmd("2.0.0", ">1").assert();
     assert
         .append_context(COMMAND_FILTER_TEST, "backwards args")
         .failure();
@@ -48,20 +44,12 @@ fn cli_filter_invalid_input() {
 
 #[test]
 fn cli_filter_test_basic_cases() {
-    let assert = common_cmd()
-        .arg(COMMAND_FILTER_TEST)
-        .arg(">1")
-        .arg("2.0.0")
-        .assert();
+    let assert = filter_test_cmd(">1", "2.0.0").assert();
     assert
         .append_context(COMMAND_FILTER_TEST, ">1 test")
         .success();
 
-    let assert = common_cmd()
-        .arg(COMMAND_FILTER_TEST)
-        .arg(">1")
-        .arg("0.0.1-rc1.br.0+abc")
-        .assert();
+    let assert = filter_test_cmd(">1", "0.0.1-rc1.br.0+abc").assert();
     assert
         .append_context(COMMAND_FILTER_TEST, ">1 0.0.1-rc1.br.0+abc")
         .failure();
@@ -69,11 +57,7 @@ fn cli_filter_test_basic_cases() {
 }
 
 fn filter_test_generic(filter: semver::VersionReq, version: semver::Version) {
-    let assert = common_cmd()
-        .arg("filter-test")
-        .arg(filter.to_string())
-        .arg(version.to_string())
-        .assert();
+    let assert = filter_test_cmd(&filter.to_string(), &version.to_string()).assert();
     let res = assert
         .append_context(COMMAND_FILTER_TEST, "property test")
         .try_success();

@@ -15,7 +15,11 @@
 //!
 //! This is a bunch of last mile display + serialization logic.
 use clap::ValueEnum;
+#[cfg(feature = "mcp")]
+use clap_mcp::{ClapMcpToolError, IntoClapMcpToolError};
 use core::fmt;
+#[cfg(feature = "mcp")]
+use schemars::JsonSchema;
 use serde::Serialize;
 use std::process::{ExitCode, Termination};
 use thiserror::Error;
@@ -23,7 +27,7 @@ use thiserror::Error;
 use crate::results;
 
 #[derive(Error, Debug)]
-pub(crate) enum ApplicationError {
+pub enum ApplicationError {
     /// We got invalid input.
     #[error("Invalid input (expected {expected:?}, got {found:?}")]
     InvalidArgument { expected: String, found: String },
@@ -38,10 +42,27 @@ pub(crate) enum ApplicationError {
 }
 
 #[derive(ValueEnum, Clone, Debug)]
-pub(crate) enum OutputFormat {
+pub enum OutputFormat {
     Text,
     Yaml,
     Json,
+}
+
+impl OutputFormat {
+    /// Format a subcommand result for CLI stdout. Not used for MCP (serialization handled there).
+    pub(crate) fn format_result(
+        &self,
+        result: &SubcommandResult,
+    ) -> Result<String, ApplicationError> {
+        match self {
+            OutputFormat::Text => Ok(result.to_string()),
+            OutputFormat::Yaml => serde_yaml::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })
+                .map(|s| format!("---\n{s}")),
+            OutputFormat::Json => serde_json::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() }),
+        }
+    }
 }
 
 /// Trait for subcommand output: types that can be written to stdout and report an exit code.
@@ -77,6 +98,7 @@ impl Termination for ExitOutcome {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(feature = "mcp", derive(JsonSchema))]
 #[serde(untagged)]
 pub(crate) enum SubcommandResult {
     /// Assertion by this program
@@ -149,6 +171,40 @@ impl From<results::VersionMutationResult> for SubcommandResult {
 impl From<results::SelectResult> for SubcommandResult {
     fn from(value: results::SelectResult) -> Self {
         Self::SelectResult(value)
+    }
+}
+
+/// MCP tool response wrapper: explicit `ok` for exit-code-like semantics (Validate, FilterTest, Compare).
+#[cfg(feature = "mcp")]
+#[derive(Serialize, JsonSchema)]
+pub(crate) struct McpToolOutput {
+    pub(crate) ok: bool,
+    pub(crate) result: SubcommandResult,
+}
+
+/// Compute success for MCP: true for exit-code success, so clients get explicit semantics.
+#[cfg(feature = "mcp")]
+fn success_for_mcp(result: &SubcommandResult) -> bool {
+    match result {
+        SubcommandResult::ValidateResult(v) => v.success(),
+        SubcommandResult::FilterTestResult(f) => f.success(),
+        SubcommandResult::ComparisonStatement(c) => c.both_equal(),
+        _ => true,
+    }
+}
+
+#[cfg(feature = "mcp")]
+pub(crate) fn mcp_wrap(result: SubcommandResult) -> McpToolOutput {
+    McpToolOutput {
+        ok: success_for_mcp(&result),
+        result,
+    }
+}
+
+#[cfg(feature = "mcp")]
+impl IntoClapMcpToolError for ApplicationError {
+    fn into_tool_error(self) -> ClapMcpToolError {
+        ClapMcpToolError::text(self.to_string())
     }
 }
 

@@ -1,0 +1,29 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - validate
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Simply validates an argument, to confirm it is a valid Semantic Version
+
+The Status Code will be 0 if it is valid, non-zero if it is not.
+
+Usage: sem-tool validate [OPTIONS] <VERSION>
+
+Arguments:
+  <VERSION>
+          Version to validate
+
+Options:
+  -s, --small
+          "Small" will ensure the MAJOR, MINOR & PATCH components are under [u64::MAX]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

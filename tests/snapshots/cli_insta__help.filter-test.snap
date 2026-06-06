@@ -1,0 +1,34 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - filter-test
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Test a Semantic Version against a filter
+
+Usage: sem-tool filter-test --filter <FILTER> --semantic-version <SEMANTIC_VERSION>
+
+Options:
+      --filter <FILTER>
+          Filter to test against a specific Semantic Version.
+          
+          These filter rules are described by the semver crate `VersionReq` documentation, and more generally in the cargo book.
+          
+          In particular, note the warnings around pre-releases in the VersionReq documentation.
+          
+          The Status Code will be 0 if it passes, non-zero if it fails.
+          
+          References: - https://docs.rs/semver/1.0.25/semver/struct.VersionReq.html - https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html
+
+      --semantic-version <SEMANTIC_VERSION>
+          Version to test
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

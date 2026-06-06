@@ -18,20 +18,20 @@ use proptest_semver::*;
 mod common;
 use common::subcommands::*;
 
-use crate::common::common_cmd;
+use crate::common::{common_cmd, compare_cmd};
 
 #[test]
 fn cli_compare_invalid_input() {
-    let assert = common_cmd().arg(COMMAND_COMPARE).arg("a.b.c").assert();
+    let assert = common_cmd()
+        .arg(COMMAND_COMPARE)
+        .arg("--a")
+        .arg("a.b.c")
+        .assert();
     assert
         .append_context(COMMAND_COMPARE, "1 bad semver args")
         .failure();
 
-    let assert = common_cmd()
-        .arg(COMMAND_COMPARE)
-        .arg("a.b.c")
-        .arg("x.y.z")
-        .assert();
+    let assert = compare_cmd("a.b.c", "x.y.z").assert();
     assert
         .append_context(COMMAND_COMPARE, "2 bad semver args")
         .failure();
@@ -41,11 +41,7 @@ fn cli_compare_invalid_input() {
 ///                     be prepared to make changes in here.
 #[test]
 fn cli_compare_basic_cases() {
-    let assert = common_cmd()
-        .arg(COMMAND_COMPARE)
-        .arg("1.2.3")
-        .arg("4.5.6")
-        .assert();
+    let assert = compare_cmd("1.2.3", "4.5.6").assert();
 
     assert
         .append_context(COMMAND_COMPARE, "no exit code reporting")
@@ -55,7 +51,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-e")
+        .arg("--a")
         .arg("1.2.3")
+        .arg("--b")
         .arg("1.2.3")
         .assert();
     assert
@@ -66,7 +64,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-e")
+        .arg("--a")
         .arg("1.2.3")
+        .arg("--b")
         .arg("4.5.6")
         .assert();
     assert
@@ -77,7 +77,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-e")
+        .arg("--a")
         .arg("4.5.6")
+        .arg("--b")
         .arg("1.2.3")
         .assert();
     assert
@@ -88,7 +90,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-e")
+        .arg("--a")
         .arg("1.2.3+1")
+        .arg("--b")
         .arg("1.2.3+0")
         .assert();
     assert
@@ -99,7 +103,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-e")
+        .arg("--a")
         .arg("1.2.3+0")
+        .arg("--b")
         .arg("1.2.3+1")
         .assert();
     assert
@@ -111,7 +117,9 @@ fn cli_compare_basic_cases() {
         .arg(COMMAND_COMPARE)
         .arg("-e")
         .arg("-s")
+        .arg("--a")
         .arg("1.2.3+0")
+        .arg("--b")
         .arg("1.2.3+1")
         .assert();
     assert
@@ -126,7 +134,9 @@ fn cli_compare_basic_cases() {
         .arg(COMMAND_COMPARE)
         .arg("-e")
         .arg("-s")
+        .arg("--a")
         .arg("1.2.2")
+        .arg("--b")
         .arg("1.2.3+1")
         .assert();
     assert
@@ -140,7 +150,9 @@ fn cli_compare_basic_cases() {
     let assert = common_cmd()
         .arg(COMMAND_COMPARE)
         .arg("-s")
+        .arg("--a")
         .arg("1.2.4+0")
+        .arg("--b")
         .arg("1.2.3+1")
         .assert();
     assert
@@ -162,7 +174,14 @@ proptest! {
     })]
     #[test]
     fn filter_test_semantic_equal(a in arb_version(), b in arb_version()) {
-        let assert = common_cmd().arg(COMMAND_COMPARE).arg("-s").arg(a.to_string()).arg(b.to_string()).assert();
+        let assert = common_cmd()
+            .arg(COMMAND_COMPARE)
+            .arg("-s")
+            .arg("--a")
+            .arg(a.to_string())
+            .arg("--b")
+            .arg(b.to_string())
+            .assert();
         assert.append_context(COMMAND_COMPARE, "property test: -s").success();
 
         // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.
@@ -170,7 +189,14 @@ proptest! {
 
     #[test]
     fn filter_test_compare_no_opts(version_a in arb_version(), version_b in arb_version()) {
-        let assert = common_cmd().arg(COMMAND_COMPARE).arg("-s").arg(version_a.to_string()).arg(version_b.to_string()).assert();
+        let assert = common_cmd()
+            .arg(COMMAND_COMPARE)
+            .arg("-s")
+            .arg("--a")
+            .arg(version_a.to_string())
+            .arg("--b")
+            .arg(version_b.to_string())
+            .assert();
         assert.append_context(COMMAND_COMPARE, "property test").success();
 
         // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.

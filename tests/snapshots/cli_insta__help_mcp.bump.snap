@@ -1,0 +1,44 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - bump
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Bump commands will increment one segment of semver by the specified amount, and print out the mutated version.
+
+Only Major, Minor and Patch are supported. You'll want to consider the `set` subcommand for pre-release and build-metadata.
+
+Usage: sem-tool bump [OPTIONS] <SEMANTIC_VERSION>
+
+Arguments:
+  <SEMANTIC_VERSION>
+          
+
+Options:
+      --bump-major <BUMP_MAJOR>
+          
+
+      --bump-minor <BUMP_MINOR>
+          
+
+      --bump-patch <BUMP_PATCH>
+          
+
+      --mcp
+          Run an MCP server over stdio that exposes this CLI's clap schema
+
+      --mcp-http <ADDR>
+          Run an MCP server over Streamable HTTP at ADDR (e.g. 127.0.0.1:8080)
+
+      --export-skills <DIR>
+          Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

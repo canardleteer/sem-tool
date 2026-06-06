@@ -22,28 +22,76 @@ fn cli() -> Command {
     Command::new(get_cargo_bin("sem-tool"))
 }
 
+/// When set (e.g. in CI for the mcp feature job), skip the default insta test so we don't
+/// compare against default-feature snapshots. The mcp binary has different --help (e.g. --mcp,
+/// --export-skills) and possibly other divergence.
+fn skip_default_insta() -> bool {
+    std::env::var("SEM_TOOL_SKIP_INSTA").unwrap_or_default() == "1"
+}
+
 #[test]
 fn cli_insta() {
+    if skip_default_insta() {
+        return;
+    }
     // Giant map of various tests for insta.
     let mut insta_targets = HashMap::new();
+
+    // --help for root and each subcommand (snapshot CLI help text)
+    insta_targets.insert("help.root", vec!["--help"]);
+    insta_targets.insert("help.explain", vec![COMMAND_EXPLAIN, "--help"]);
+    insta_targets.insert("help.compare", vec![COMMAND_COMPARE, "--help"]);
+    insta_targets.insert("help.sort", vec![COMMAND_SORT, "--help"]);
+    insta_targets.insert("help.filter-test", vec![COMMAND_FILTER_TEST, "--help"]);
+    insta_targets.insert("help.validate", vec![COMMAND_VALIDATE, "--help"]);
+    insta_targets.insert("help.generate", vec![COMMAND_GENERATE, "--help"]);
+    insta_targets.insert("help.set", vec![COMMAND_SET, "--help"]);
+    insta_targets.insert("help.bump", vec![COMMAND_BUMP, "--help"]);
 
     // Filter Tests
     insta_targets.insert(
         "filter.invalid-semver.1",
-        vec![COMMAND_FILTER_TEST, ">a.b.c"],
+        vec![COMMAND_FILTER_TEST, "--filter", ">a.b.c"],
     );
     insta_targets.insert(
         "filter.invalid-semver.2",
-        vec![COMMAND_FILTER_TEST, ">1", "x.y.z"],
+        vec![
+            COMMAND_FILTER_TEST,
+            "--filter",
+            ">1",
+            "--semantic-version",
+            "x.y.z",
+        ],
     );
     insta_targets.insert(
         "filter.invalid-order.1",
-        vec![COMMAND_FILTER_TEST, "2.0.0", ">1"],
+        vec![
+            COMMAND_FILTER_TEST,
+            "--filter",
+            "2.0.0",
+            "--semantic-version",
+            ">1",
+        ],
     );
-    insta_targets.insert("filter.plain.1", vec![COMMAND_FILTER_TEST, ">1", "2.0.0"]);
+    insta_targets.insert(
+        "filter.plain.1",
+        vec![
+            COMMAND_FILTER_TEST,
+            "--filter",
+            ">1",
+            "--semantic-version",
+            "2.0.0",
+        ],
+    );
     insta_targets.insert(
         "filter.plain.2",
-        vec![COMMAND_FILTER_TEST, ">1", "0.0.1-rc1.br.0+abc"],
+        vec![
+            COMMAND_FILTER_TEST,
+            "--filter",
+            ">1",
+            "--semantic-version",
+            "0.0.1-rc1.br.0+abc",
+        ],
     );
 
     // Sort Tests
@@ -139,39 +187,55 @@ fn cli_insta() {
     // Compare Tests
     insta_targets.insert(
         "compare.valid-semver.1",
-        vec![COMMAND_COMPARE, "1.2.3", "4.5.6"],
+        vec![COMMAND_COMPARE, "--a", "1.2.3", "--b", "4.5.6"],
     );
     insta_targets.insert(
         "compare.exit-status.1",
-        vec![COMMAND_COMPARE, "-e", "1.2.3", "1.2.3"],
+        vec![COMMAND_COMPARE, "-e", "--a", "1.2.3", "--b", "1.2.3"],
     );
     insta_targets.insert(
         "compare.exit-status.2",
-        vec![COMMAND_COMPARE, "-e", "1.2.3", "4.5.6"],
+        vec![COMMAND_COMPARE, "-e", "--a", "1.2.3", "--b", "4.5.6"],
     );
     insta_targets.insert(
         "compare.exit-status.3",
-        vec![COMMAND_COMPARE, "-e", "4.5.6", "1.2.3"],
+        vec![COMMAND_COMPARE, "-e", "--a", "4.5.6", "--b", "1.2.3"],
     );
     insta_targets.insert(
         "compare.exit-status.4",
-        vec![COMMAND_COMPARE, "-e", "1.2.3+1", "1.2.3+0"],
+        vec![COMMAND_COMPARE, "-e", "--a", "1.2.3+1", "--b", "1.2.3+0"],
     );
     insta_targets.insert(
         "compare.exit-status.5",
-        vec![COMMAND_COMPARE, "-e", "1.2.3+0", "1.2.3+1"],
+        vec![COMMAND_COMPARE, "-e", "--a", "1.2.3+0", "--b", "1.2.3+1"],
     );
     insta_targets.insert(
         "compare.exit-status.6",
-        vec![COMMAND_COMPARE, "-e", "-s", "1.2.3+0", "1.2.3+1"],
+        vec![
+            COMMAND_COMPARE,
+            "-e",
+            "-s",
+            "--a",
+            "1.2.3+0",
+            "--b",
+            "1.2.3+1",
+        ],
     );
     insta_targets.insert(
         "compare.complex.1",
-        vec![COMMAND_COMPARE, "-e", "-s", "1.2.2", "1.2.3+1"],
+        vec![
+            COMMAND_COMPARE,
+            "-e",
+            "-s",
+            "--a",
+            "1.2.2",
+            "--b",
+            "1.2.3+1",
+        ],
     );
     insta_targets.insert(
         "compare.semantic-exit-status.1",
-        vec![COMMAND_COMPARE, "-s", "1.2.4+0", "1.2.3+1"],
+        vec![COMMAND_COMPARE, "-s", "--a", "1.2.4+0", "--b", "1.2.3+1"],
     );
     insta_targets.insert(
         "bump.simple.1",
@@ -188,38 +252,100 @@ fn cli_insta() {
     insta_targets.insert("set.simple.2", vec![COMMAND_SET, "1.1.1", "--set-major=20"]);
 
     // Select Tests
-    insta_targets.insert("select.major.1", vec![COMMAND_SELECT, "major", "1.2.3"]);
+    insta_targets.insert(
+        "select.major.1",
+        vec![COMMAND_SELECT, "--component", "major", "--version", "1.2.3"],
+    );
     insta_targets.insert(
         "select.pre-release.present",
-        vec![COMMAND_SELECT, "pre-release", "1.0.0-rc.1"],
+        vec![
+            COMMAND_SELECT,
+            "--component",
+            "pre-release",
+            "--version",
+            "1.0.0-rc.1",
+        ],
     );
     insta_targets.insert(
         "select.pre-release.missing",
-        vec![COMMAND_SELECT, "pre-release", "1.0.0"],
+        vec![
+            COMMAND_SELECT,
+            "--component",
+            "pre-release",
+            "--version",
+            "1.0.0",
+        ],
     );
     insta_targets.insert(
         "select.pre-release.fail-if-not-found",
         vec![
             COMMAND_SELECT,
+            "--component",
             "pre-release",
+            "--version",
             "1.0.0",
             "--fail-if-not-found",
         ],
     );
     insta_targets.insert(
         "select.build-metadata.1",
-        vec![COMMAND_SELECT, "build-metadata", "1.0.0+abc.1"],
+        vec![
+            COMMAND_SELECT,
+            "--component",
+            "build-metadata",
+            "--version",
+            "1.0.0+abc.1",
+        ],
     );
     insta_targets.insert(
         "select.text.1",
-        vec!["-o", "text", COMMAND_SELECT, "patch", "2.0.4"],
+        vec![
+            "-o",
+            "text",
+            COMMAND_SELECT,
+            "--component",
+            "patch",
+            "--version",
+            "2.0.4",
+        ],
     );
     insta_targets.insert(
         "select.small.1",
-        vec![COMMAND_SELECT, "-s", "minor", "10.20.30"],
+        vec![
+            COMMAND_SELECT,
+            "-s",
+            "--component",
+            "minor",
+            "--version",
+            "10.20.30",
+        ],
     );
 
     for (key, args) in insta_targets.iter() {
         assert_cmd_snapshot!(*key, cli().args(args));
+    }
+}
+
+/// Snapshots --help output for the MCP-enabled binary. Run with `SEM_TOOL_MCP_HELP=1` when
+/// testing the `mcp` feature build so we have separate snapshots (mcp adds --mcp, --export-skills,
+/// etc.). In CI the mcp job sets both SEM_TOOL_SKIP_INSTA and SEM_TOOL_MCP_HELP.
+#[test]
+fn cli_insta_mcp_help() {
+    if std::env::var("SEM_TOOL_MCP_HELP").unwrap_or_default() != "1" {
+        return;
+    }
+    let help_cases = [
+        ("help_mcp.root", vec!["--help"]),
+        ("help_mcp.explain", vec![COMMAND_EXPLAIN, "--help"]),
+        ("help_mcp.compare", vec![COMMAND_COMPARE, "--help"]),
+        ("help_mcp.sort", vec![COMMAND_SORT, "--help"]),
+        ("help_mcp.filter-test", vec![COMMAND_FILTER_TEST, "--help"]),
+        ("help_mcp.validate", vec![COMMAND_VALIDATE, "--help"]),
+        ("help_mcp.generate", vec![COMMAND_GENERATE, "--help"]),
+        ("help_mcp.set", vec![COMMAND_SET, "--help"]),
+        ("help_mcp.bump", vec![COMMAND_BUMP, "--help"]),
+    ];
+    for (name, args) in help_cases {
+        assert_cmd_snapshot!(name, cli().args(args));
     }
 }

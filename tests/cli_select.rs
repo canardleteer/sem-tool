@@ -18,15 +18,11 @@ use proptest_semver::*;
 mod common;
 use common::subcommands::*;
 
-use crate::common::common_cmd;
+use crate::common::{common_cmd, select_cmd};
 
 #[test]
 fn cli_select_invalid_semver() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("major")
-        .arg("a.b.c")
-        .assert();
+    let assert = select_cmd("major", "a.b.c").assert();
     assert
         .append_context(COMMAND_SELECT, "invalid semver")
         .failure();
@@ -34,11 +30,7 @@ fn cli_select_invalid_semver() {
 
 #[test]
 fn cli_select_basic_major() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("major")
-        .arg("1.2.3")
-        .assert();
+    let assert = select_cmd("major", "1.2.3").assert();
     assert
         .append_context(COMMAND_SELECT, "major")
         .stdout("---\nvalue: '1'\n")
@@ -47,11 +39,7 @@ fn cli_select_basic_major() {
 
 #[test]
 fn cli_select_basic_minor() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("minor")
-        .arg("1.2.3")
-        .assert();
+    let assert = select_cmd("minor", "1.2.3").assert();
     assert
         .append_context(COMMAND_SELECT, "minor")
         .stdout("---\nvalue: '2'\n")
@@ -60,11 +48,7 @@ fn cli_select_basic_minor() {
 
 #[test]
 fn cli_select_basic_patch() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("patch")
-        .arg("0.1.2-rc.0.a.1.b+a.0.b.1")
-        .assert();
+    let assert = select_cmd("patch", "0.1.2-rc.0.a.1.b+a.0.b.1").assert();
     assert
         .append_context(COMMAND_SELECT, "patch")
         .stdout("---\nvalue: '2'\n")
@@ -73,11 +57,7 @@ fn cli_select_basic_patch() {
 
 #[test]
 fn cli_select_basic_pre_release() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("pre-release")
-        .arg("0.1.2-rc.0.a.1.b+a.0.b.1")
-        .assert();
+    let assert = select_cmd("pre-release", "0.1.2-rc.0.a.1.b+a.0.b.1").assert();
     assert
         .append_context(COMMAND_SELECT, "pre-release")
         .stdout("---\nvalue: rc.0.a.1.b\n")
@@ -86,11 +66,7 @@ fn cli_select_basic_pre_release() {
 
 #[test]
 fn cli_select_basic_build_metadata() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("build-metadata")
-        .arg("0.1.2-rc.0.a.1.b+a.0.b.1")
-        .assert();
+    let assert = select_cmd("build-metadata", "0.1.2-rc.0.a.1.b+a.0.b.1").assert();
     assert
         .append_context(COMMAND_SELECT, "build-metadata")
         .stdout("---\nvalue: a.0.b.1\n")
@@ -99,11 +75,7 @@ fn cli_select_basic_build_metadata() {
 
 #[test]
 fn cli_select_optional_missing_success() {
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("pre-release")
-        .arg("1.0.0")
-        .assert();
+    let assert = select_cmd("pre-release", "1.0.0").assert();
     assert
         .append_context(COMMAND_SELECT, "pre-release absent default")
         .stdout("---\n{}\n")
@@ -114,7 +86,9 @@ fn cli_select_optional_missing_success() {
 fn cli_select_optional_missing_fail_if_not_found() {
     let assert = common_cmd()
         .arg(COMMAND_SELECT)
+        .arg("--component")
         .arg("pre-release")
+        .arg("--version")
         .arg("1.0.0")
         .arg("--fail-if-not-found")
         .assert();
@@ -125,12 +99,7 @@ fn cli_select_optional_missing_fail_if_not_found() {
 
 #[test]
 fn cli_select_default_regex_large_version() {
-    // Default (regex) path supports large numeric components
-    let assert = common_cmd()
-        .arg(COMMAND_SELECT)
-        .arg("major")
-        .arg("18446744073709551616.0.0")
-        .assert();
+    let assert = select_cmd("major", "18446744073709551616.0.0").assert();
     assert
         .append_context(COMMAND_SELECT, "regex large major")
         .stdout("---\nvalue: '18446744073709551616'\n")
@@ -142,7 +111,9 @@ fn cli_select_small_flag() {
     let assert = common_cmd()
         .arg(COMMAND_SELECT)
         .arg("-s")
+        .arg("--component")
         .arg("major")
+        .arg("--version")
         .arg("1.2.3")
         .assert();
     assert
@@ -157,7 +128,9 @@ fn cli_select_text_output() {
         .arg("-o")
         .arg("text")
         .arg(COMMAND_SELECT)
+        .arg("--component")
         .arg("patch")
+        .arg("--version")
         .arg("2.0.4")
         .assert();
     assert
@@ -186,7 +159,9 @@ proptest! {
         let assert = common_cmd()
             .arg(COMMAND_SELECT)
             .arg("-s")
+            .arg("--component")
             .arg(component)
+            .arg("--version")
             .arg(version.to_string())
             .assert();
         assert.append_context(COMMAND_SELECT, "property test -s").success();
@@ -203,11 +178,7 @@ proptest! {
             Just("build-metadata"),
         ]
     ) {
-        let assert = common_cmd()
-            .arg(COMMAND_SELECT)
-            .arg(component)
-            .arg(version)
-            .assert();
+        let assert = select_cmd(component, &version).assert();
         assert.append_context(COMMAND_SELECT, "property test regex").success();
     }
 }

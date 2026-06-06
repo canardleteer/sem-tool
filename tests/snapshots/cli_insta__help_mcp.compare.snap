@@ -1,0 +1,57 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - compare
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Compare 2 Semantic Versions.
+
+Results are provided in the form "A is {Greater,Equals,Less} {to,than} B", with both Semantic results (meaningful results under Semantic Versioning), as well as Lexical results (meaningless, but handy for sorting text lists).
+
+Without enabling `--set_exit_status`, the exit status is generally meaningless, other than confirming that the arguments were valid.
+
+Usage: sem-tool compare [OPTIONS] --a <A> --b <B>
+
+Options:
+  -e, --set-exit-status
+          If you want some slightly complex exit status codes for this dual compare, you can turn them on with this flag.
+          
+          When both Semantic and Lexical comparisons are Equal, the command will end with an exit status of 0 (Success).
+          
+          All other outcomes, are returned with an exit status of the form: 1XY [between 100-122].
+          
+          - With X being (0 if Less, 1 if Equal, 2 if Greater) on the Semantic Compare
+          
+          - With Y being (0 if Less, 1 if Equal, 2 if Greater) on the Lexical Compare
+          
+          The non-0 exit status codes, should be considered UNSTABLE, because something better can probably be figured out.
+
+  -s, --semantic-exit-status
+          Always exit with success when Semantic Versions are Equal.
+          
+          Mostly impacts the output when the flag `set_exit_status` is set.
+
+      --a <A>
+          The base version used for comparison
+
+      --b <B>
+          The version we are comparing against
+
+      --mcp
+          Run an MCP server over stdio that exposes this CLI's clap schema
+
+      --mcp-http <ADDR>
+          Run an MCP server over Streamable HTTP at ADDR (e.g. 127.0.0.1:8080)
+
+      --export-skills <DIR>
+          Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

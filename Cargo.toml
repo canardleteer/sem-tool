@@ -28,6 +28,13 @@ categories = ["command-line-utilities"]
 readme = "README.md"
 description = "A simple Semantic Versioning CLI tool for parsing, filtering, sorting and explaining"
 
+[workspace]
+members = [".", "sem-tool-mcp"]
+
+[features]
+# Experimental: enable MCP server mode (--mcp / --export-skills). Not enabled by default.
+mcp = ["dep:clap-mcp", "dep:schemars"]
+
 [package.metadata.wix]
 upgrade-guid = "4B0BC255-6C49-4242-8F92-789262A65064"
 path-guid = "D28BFC08-1707-4BF8-ACB8-9A4496178C5F"
@@ -62,6 +69,10 @@ serde_json = "1.0.150"
 #                     harder to use with common tools like `yq`, and I haven't
 #                     taken the time to figure out how to make it stop.
 serde_yaml = "0.9.34"
+
+# NOTE(canardleteer): clap-mcp 0.0.4 branch.
+clap-mcp = { git = "https://github.com/canardleteer/clap-mcp.git", rev = "7956d72e83cfc5c4bae8daab429b240803dc421e", optional = true, features = ["output-schema", "http"] }
+schemars = { version = "0.8", optional = true, features = ["derive"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"

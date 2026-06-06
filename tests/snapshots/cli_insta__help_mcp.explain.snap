@@ -1,0 +1,41 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - explain
+    - "--help"
+---
+success: true
+exit_code: 0
+----- stdout -----
+Explain a valid Semantic Version as parsed by the spec.
+
+Breaks apart the Semantic Version, into it's individual components.
+
+All values are returned as strings, because the unsigned integer types are not necessarily bound by a numeric type that is parsable by common libraries.
+
+It is worth noting, Semver 2.0.0 §11.4.1 & §11.4.2 pre-release & metadata dot separated values, cannot be negative numbers, since they cannot be represented with hyphens.
+
+Reference: https://semver.org/#spec-item-11
+
+Usage: sem-tool explain [OPTIONS] <SEMANTIC_VERSION>
+
+Arguments:
+  <SEMANTIC_VERSION>
+          
+
+Options:
+      --mcp
+          Run an MCP server over stdio that exposes this CLI's clap schema
+
+      --mcp-http <ADDR>
+          Run an MCP server over Streamable HTTP at ADDR (e.g. 127.0.0.1:8080)
+
+      --export-skills <DIR>
+          Generate Agent Skills (SKILL.md) from tools, resources, and prompts, then exit
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+----- stderr -----

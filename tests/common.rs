@@ -28,3 +28,36 @@ pub(crate) mod subcommands {
 pub(crate) fn common_cmd() -> Command {
     cargo_bin_cmd!(env!("CARGO_PKG_NAME"))
 }
+
+#[allow(dead_code)]
+pub(crate) fn compare_cmd(a: &str, b: &str) -> Command {
+    let mut cmd = common_cmd();
+    cmd.arg(subcommands::COMMAND_COMPARE)
+        .arg("--a")
+        .arg(a)
+        .arg("--b")
+        .arg(b);
+    cmd
+}
+
+#[allow(dead_code)]
+pub(crate) fn filter_test_cmd(filter: &str, semantic_version: &str) -> Command {
+    let mut cmd = common_cmd();
+    cmd.arg(subcommands::COMMAND_FILTER_TEST)
+        .arg("--filter")
+        .arg(filter)
+        .arg("--semantic-version")
+        .arg(semantic_version);
+    cmd
+}
+
+#[allow(dead_code)]
+pub(crate) fn select_cmd(component: &str, version: &str) -> Command {
+    let mut cmd = common_cmd();
+    cmd.arg(subcommands::COMMAND_SELECT)
+        .arg("--component")
+        .arg(component)
+        .arg("--version")
+        .arg(version);
+    cmd
+}

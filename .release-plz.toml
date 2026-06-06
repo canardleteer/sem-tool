@@ -1,7 +1,13 @@
 [[package]]
-name="sem-tool"
+name = "sem-tool"
+version_group = "sem-tool"
 
-# `git_release_enable` is used by the `release-plz` tool to enable/disable
-# some form of "Release API", but we allow `dist` to publish the `release`
-# on Github.
+# release-plz still drives the release (versioning, tagging, crates.io publish).
+# We leave GitHub Release creation to dist: the tag pushed by release-plz
+# triggers the Release workflow, and dist builds artifacts and creates the
+# GitHub Release with installers/binaries. Avoids duplicate or empty releases.
 git_release_enable = false
+
+[[package]]
+name = "sem-tool-mcp"
+version_group = "sem-tool"
