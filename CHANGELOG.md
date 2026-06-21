@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12](https://github.com/canardleteer/sem-tool/compare/v0.1.11...v0.1.12) - 2026-06-21
+
+### Other
+
+- enable dependabot for cargo dependencies
+- *(deps)* bump regex and insta dev dependencies, drop clap_derive pin
+- *(deps)* bump proptest-semver to 0.1.3
+- *(deps)* bump rvben/rumdl from 0.2.4 to 0.2.16
+- remove second version pin, let dependabot do the work
+- *(deps)* bump rvben/rumdl from 0.2.2 to 0.2.4
+
 ## [0.1.11](https://github.com/canardleteer/sem-tool/compare/v0.1.10...v0.1.11) - 2026-05-27
 
 ### Added
