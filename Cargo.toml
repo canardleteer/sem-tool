@@ -37,7 +37,6 @@ eula = false
 [dependencies]
 rand = { version = "0.9.4", features = [ "std_rng" ] }
 clap = { version = "4.6", features = ["derive"] }
-clap_derive = "4.6.1"
 indexmap = { version = "2.14.0", features= ["serde"] }
 semver = { version = "1.0.28", features= ["serde"] }
 thiserror = "2.0.18"
@@ -49,24 +48,29 @@ rand_regex = "0.18.1"
 #                     much other than parsing a single string per application
 #                     run, I think it's reasonable to shrink down the dependency
 #                     tree at a performance cost.
-regex = { version = "1.12.3", default-features = false, features = ["std"] }
+regex = { version = "1.12.4", default-features = false, features = ["std"] }
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.150"
 
-# NOTE(canardleteer): serde_YAML vs serde_YML:
+# NOTE(canardleteer): YAML serialization trade-offs:
 #
-#                     serde_yml is a reasonable drop in replacement, and can be
-#                     used instead. serde_yaml is probably fine for now.
-#                     serde_yml, currently "over quotes" strings, making it
-#                     harder to use with common tools like `yq`, and I haven't
-#                     taken the time to figure out how to make it stop.
+#   - `serde_yaml` (current): stable Serde integration; only used for
+#     `serde_yaml::to_string` in main. Upstream crate is deprecated/archived
+#     and has YAML 1.1 quirks.
+#
+#   - `serde_yml`: active fork with a drop-in API, but over-quotes strings in
+#     output, breaking interoperability with tools like `yq`.
+#
+#   - `saphyr-rs/saphyr` (target direction): YAML 1.2 compliant, passes the
+#     YAML test suite, correctness-first. Official `saphyr-serde` is planned;
+#     migrate when Serde integration lands from saphyr-rs rather than serde_yml.
 serde_yaml = "0.9.34"
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
-insta = { version = "1.47.2", features = ["json", "yaml"] }
-insta-cmd = "0.6.0"
+insta = { version = "1.48.0", features = ["json", "yaml"] }
+insta-cmd = "0.7.0"
 proptest = "1.11.0"
 proptest-semver = "0.1.3"
 
