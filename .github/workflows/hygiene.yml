@@ -75,9 +75,8 @@ jobs:
       with:
         submodules: true
 
-    # https://rumdl.dev/usage/ci-cd/ — pin both the action tag, which 
-    # aligns with the rumdl version
+    # https://rumdl.dev/usage/ci-cd/ — @v0 tracks the latest v0.x release.
 
-    - uses: rvben/rumdl@v0.2.16
+    - uses: rvben/rumdl@v0
       with:
         config: .rumdl.toml

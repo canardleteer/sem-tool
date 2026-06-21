@@ -14,7 +14,8 @@
 //! limitations under the License.
 use std::string::FromUtf8Error;
 
-use rand::{Rng, distr::Distribution};
+use rand::RngExt;
+use rand::distr::Distribution;
 use semver::{BuildMetadata, Prerelease};
 
 /// Regex for Semantic Version 2.0.0, directly from the spec, with 2 changes:
@@ -43,7 +44,7 @@ pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
             .unwrap();
 
     (&mut rng)
-        .sample_iter(&semver)
+        .sample_iter(semver)
         .take(count)
         .collect::<Vec<String>>()
 }
@@ -53,11 +54,8 @@ pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
 ///
 /// This could probably be done better.
 pub(crate) fn generate_u64_safe_semver(count: usize) -> Vec<String> {
-    type RandomStringRegexIter = rand::distr::Iter<
-        rand_regex::Regex,
-        rand::prelude::ThreadRng,
-        Result<std::string::String, FromUtf8Error>,
-    >;
+    type RandomStringRegexIter =
+        rand::distr::Iter<rand_regex::Regex, rand::rngs::ThreadRng, Result<String, FromUtf8Error>>;
 
     let mut rng = rand::rng();
 

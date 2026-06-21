@@ -35,12 +35,12 @@ license = false
 eula = false
 
 [dependencies]
-rand = { version = "0.9.4", features = [ "std_rng" ] }
+rand = { version = "0.10.1", features = [ "std_rng" ] }
 clap = { version = "4.6", features = ["derive"] }
 indexmap = { version = "2.14.0", features= ["serde"] }
 semver = { version = "1.0.28", features= ["serde"] }
 thiserror = "2.0.18"
-rand_regex = "0.18.1"
+rand_regex = "0.19.0"
 
 # NOTE(canardleteer): The inclusion of default `regex` added 3MB to the release
 #                     binary, and that left somewhat of a sour taste in my
