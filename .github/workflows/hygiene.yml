@@ -78,6 +78,6 @@ jobs:
     # https://rumdl.dev/usage/ci-cd/ — pin both the action tag, which 
     # aligns with the rumdl version
 
-    - uses: rvben/rumdl@v0.2.16
+    - uses: rvben/rumdl@v0.2.20
       with:
         config: .rumdl.toml
