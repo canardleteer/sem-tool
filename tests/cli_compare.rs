@@ -14,51 +14,12 @@
 //! limitations under the License.
 use proptest::prelude::*;
 use proptest_semver::*;
-use semver::Version;
+use sem_tool::results::{compare_exit_code, version_without_build_metadata};
 
 mod common;
 use common::subcommands::*;
 
 use crate::common::common_cmd;
-
-fn compare_exit_code(a: &Version, b: &Version) -> i32 {
-    let sem = {
-        let a_nb = strip_build(a);
-        let b_nb = strip_build(b);
-        a_nb.cmp(&b_nb)
-    };
-    let lex = a.cmp(b);
-    ordering_pair_to_exit_code(sem, lex)
-}
-
-fn strip_build(v: &Version) -> Version {
-    Version {
-        major: v.major,
-        minor: v.minor,
-        patch: v.patch,
-        pre: v.pre.clone(),
-        build: semver::BuildMetadata::EMPTY,
-    }
-}
-
-fn ordering_pair_to_exit_code(sem: std::cmp::Ordering, lex: std::cmp::Ordering) -> i32 {
-    use std::cmp::Ordering::*;
-    let s = match sem {
-        Less => 0,
-        Equal => 1,
-        Greater => 2,
-    };
-    let l = match lex {
-        Less => 0,
-        Equal => 1,
-        Greater => 2,
-    };
-    if s == 1 && l == 1 {
-        0
-    } else {
-        100 + s * 10 + l
-    }
-}
 
 #[test]
 fn cli_compare_invalid_input() {
@@ -227,7 +188,7 @@ proptest! {
 
         let expected = compare_exit_code(&version_a, &version_b);
         let assert = cmd.assert();
-        if semantic_exit_status && strip_build(&version_a) == strip_build(&version_b) {
+        if semantic_exit_status && version_without_build_metadata(&version_a) == version_without_build_metadata(&version_b) {
             assert.append_context(COMMAND_COMPARE, "property test -es").success();
         } else {
             assert

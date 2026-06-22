@@ -21,6 +21,7 @@ use std::{
     process::{ExitCode, Termination},
 };
 
+use clap::ValueEnum;
 use indexmap::IndexMap;
 use rand::prelude::*;
 use regex::Regex;
@@ -29,18 +30,46 @@ use serde::Serialize;
 
 use super::regex::{SEMVER_REGEX, generate_any_valid_semver, generate_u64_safe_semver};
 
+macro_rules! impl_success_termination {
+    ($($ty:ty),* $(,)?) => {
+        $(impl Termination for $ty {
+            fn report(self) -> ExitCode {
+                ExitCode::SUCCESS
+            }
+        })*
+    };
+}
+
+fn writeln_items<T: fmt::Display>(items: &[T], f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    for item in items {
+        writeln!(f, "{item}")?;
+    }
+    Ok(())
+}
+
+/// Component of a semantic version (used by `select` and clap).
+#[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SemverComponent {
+    Major,
+    Minor,
+    Patch,
+    PreRelease,
+    BuildMetadata,
+}
+
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
-pub(crate) struct ValidateResult {
+pub struct ValidateResult {
     valid: bool,
 }
 
 impl ValidateResult {
-    pub(crate) fn validate(semantic_version: String, small: bool) -> Self {
+    pub fn validate(semantic_version: String, small: bool) -> Self {
         let pass = if small {
             Version::parse(&semantic_version).is_ok()
         } else {
-            // Static string, always expected to pass being a valid regex.
+            // If this crate gains a pub lib surface and validate may be called repeatedly,
+            // compile SEMVER_REGEX once via LazyLock in regex.rs instead of per call.
             Regex::new(super::regex::SEMVER_REGEX)
                 .unwrap()
                 .is_match(&semantic_version)
@@ -72,12 +101,12 @@ impl Termination for ValidateResult {
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
-pub(crate) struct FilterTestResult {
+pub struct FilterTestResult {
     pass: bool,
 }
 
 impl FilterTestResult {
-    pub(crate) fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
+    pub fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
         filter.matches(semantic_version).into()
     }
 }
@@ -108,19 +137,8 @@ impl fmt::Display for FilterTestResult {
     }
 }
 
-/// Component of a semantic version that can be selected.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum SelectComponent {
-    Major,
-    Minor,
-    Patch,
-    PreRelease,
-    BuildMetadata,
-}
-
-/// Result of selecting a single component from a semantic version.
 #[derive(Serialize, PartialEq)]
-pub(crate) struct SelectResult {
+pub struct SelectResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<String>,
     #[serde(skip)]
@@ -142,9 +160,9 @@ impl std::error::Error for SelectParseError {}
 impl SelectResult {
     /// Run select: parse version (regex by default, or semver crate with small),
     /// extract the requested component, and build result.
-    pub(crate) fn select(
+    pub fn select(
         version: &str,
-        component: SelectComponent,
+        component: SemverComponent,
         small: bool,
         fail_if_not_found: bool,
     ) -> Result<Self, Box<dyn Error>> {
@@ -167,12 +185,12 @@ impl SelectResult {
         })
     }
 
-    fn extract_from_version(v: &Version, component: SelectComponent) -> Option<String> {
+    fn extract_from_version(v: &Version, component: SemverComponent) -> Option<String> {
         match component {
-            SelectComponent::Major => Some(v.major.to_string()),
-            SelectComponent::Minor => Some(v.minor.to_string()),
-            SelectComponent::Patch => Some(v.patch.to_string()),
-            SelectComponent::PreRelease => {
+            SemverComponent::Major => Some(v.major.to_string()),
+            SemverComponent::Minor => Some(v.minor.to_string()),
+            SemverComponent::Patch => Some(v.patch.to_string()),
+            SemverComponent::PreRelease => {
                 let s = v.pre.as_str();
                 if s.is_empty() {
                     None
@@ -180,7 +198,7 @@ impl SelectResult {
                     Some(s.to_string())
                 }
             }
-            SelectComponent::BuildMetadata => {
+            SemverComponent::BuildMetadata => {
                 let s = v.build.as_str();
                 if s.is_empty() {
                     None
@@ -193,14 +211,14 @@ impl SelectResult {
 
     fn extract_from_regex(
         (major, minor, patch, pre, build): SemverRegexCaptures,
-        component: SelectComponent,
+        component: SemverComponent,
     ) -> Option<String> {
         match component {
-            SelectComponent::Major => Some(major),
-            SelectComponent::Minor => Some(minor),
-            SelectComponent::Patch => Some(patch),
-            SelectComponent::PreRelease => pre,
-            SelectComponent::BuildMetadata => build,
+            SemverComponent::Major => Some(major),
+            SemverComponent::Minor => Some(minor),
+            SemverComponent::Patch => Some(patch),
+            SemverComponent::PreRelease => pre,
+            SemverComponent::BuildMetadata => build,
         }
     }
 }
@@ -209,6 +227,8 @@ impl SelectResult {
 type SemverRegexCaptures = (String, String, String, Option<String>, Option<String>);
 
 fn parse_semver_components(s: &str) -> Option<SemverRegexCaptures> {
+    // If this crate gains a pub lib surface and select may be called repeatedly,
+    // compile SEMVER_REGEX once via LazyLock in regex.rs instead of per call.
     let re = Regex::new(SEMVER_REGEX).ok()?;
     let cap = re.captures(s)?;
     let major = cap.get(1)?.as_str().to_string();
@@ -244,7 +264,7 @@ impl Termination for SelectResult {
     }
 }
 #[derive(Clone, Debug, Serialize, PartialEq)]
-pub(crate) enum SegmentType {
+pub enum SegmentType {
     Numeric,
     Ascii,
 }
@@ -262,7 +282,7 @@ impl fmt::Display for SegmentType {
 ///
 /// Kind describes how the value is meant to be interpreted for precedence.
 #[derive(Clone, Debug, Serialize, PartialEq)]
-pub(crate) struct PreMetaSegment {
+pub struct PreMetaSegment {
     kind: SegmentType,
     value: String,
 }
@@ -289,7 +309,7 @@ impl From<&str> for PreMetaSegment {
 
 /// Descriptive information about a Version.
 #[derive(Clone, Serialize, PartialEq)]
-pub(crate) struct VersionExplanation {
+pub struct VersionExplanation {
     major: u64,
     minor: u64,
     patch: u64,
@@ -371,15 +391,9 @@ impl fmt::Display for VersionExplanation {
     }
 }
 
-impl Termination for VersionExplanation {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
-    }
-}
-
 /// A simple list of Versions.
 #[derive(Serialize, PartialEq)]
-pub(crate) struct FlatVersionsList {
+pub struct FlatVersionsList {
     versions: Vec<Version>,
     potentially_ambiguous: bool,
 }
@@ -398,60 +412,20 @@ impl From<&mut OrderedVersionMap> for FlatVersionsList {
 
 impl fmt::Display for FlatVersionsList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for v in self.versions.iter() {
-            writeln!(f, "{v}")?
-        }
-        Ok(())
-    }
-}
-
-impl Termination for FlatVersionsList {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
-    }
-}
-
-/// A simple list of Strings.
-///
-/// NOTE(canardleteer): Probably could become any serializable type with Display.
-#[derive(Serialize, PartialEq)]
-pub(crate) struct FlatStringList {
-    versions: Vec<String>,
-}
-
-impl From<GenerateResult> for FlatStringList {
-    fn from(value: GenerateResult) -> Self {
-        Self {
-            versions: value.into_inner(),
-        }
-    }
-}
-
-impl fmt::Display for FlatStringList {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for v in self.versions.iter() {
-            writeln!(f, "{v}")?
-        }
-        Ok(())
-    }
-}
-
-impl Termination for FlatStringList {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
+        writeln_items(&self.versions, f)
     }
 }
 
 /// A usefully ordered list of versions.
 #[derive(Serialize)]
-pub(crate) struct OrderedVersionMap {
+pub struct OrderedVersionMap {
     #[serde(rename(serialize = "versions"))]
     inner: IndexMap<Version, Vec<Version>>,
     potentially_ambiguous: bool,
 }
 
 impl OrderedVersionMap {
-    pub(crate) fn new(
+    pub fn new(
         versions: &mut Vec<Version>,
         filter: &Option<VersionReq>,
         lexical_sorting: bool,
@@ -536,21 +510,15 @@ impl fmt::Display for OrderedVersionMap {
     }
 }
 
-impl Termination for OrderedVersionMap {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
-    }
-}
-
 /// A statement about the comparison about 2 versions
 #[derive(Serialize, PartialEq)]
-pub(crate) struct ComparisonStatement {
+pub struct ComparisonStatement {
     semantic_ordering: SerializableOrdering,
     lexical_ordering: SerializableOrdering,
 }
 
 impl ComparisonStatement {
-    pub(crate) fn new(a: &Version, b: &Version) -> Self {
+    pub fn new(a: &Version, b: &Version) -> Self {
         let a_no_build = version_without_build_metadata(a);
         let b_no_build = version_without_build_metadata(b);
 
@@ -560,23 +528,24 @@ impl ComparisonStatement {
         }
     }
 
-    pub(crate) fn semantic_ordering(&self) -> &SerializableOrdering {
+    pub fn semantic_ordering(&self) -> &SerializableOrdering {
         &self.semantic_ordering
     }
 
     #[allow(dead_code)]
-    pub(crate) fn lexical_ordering(&self) -> &SerializableOrdering {
+    pub fn lexical_ordering(&self) -> &SerializableOrdering {
         &self.lexical_ordering
     }
 }
 
 #[derive(Serialize, PartialEq)]
-pub(crate) struct GenerateResult {
+pub struct GenerateResult {
+    #[serde(rename(serialize = "versions"))]
     inner: Vec<String>,
 }
 
 impl GenerateResult {
-    pub(crate) fn new(small: bool, count: usize) -> Self {
+    pub fn new(small: bool, count: usize) -> Self {
         let inner = if small {
             generate_u64_safe_semver(count)
         } else {
@@ -585,43 +554,40 @@ impl GenerateResult {
         GenerateResult { inner }
     }
 
-    pub(crate) fn into_inner(self) -> Vec<String> {
-        self.inner.clone()
+    pub fn into_inner(self) -> Vec<String> {
+        self.inner
     }
 }
 
 impl fmt::Display for GenerateResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for i in self.inner.iter() {
-            writeln!(f, "{}", &i)?
-        }
-        Ok(())
+        writeln_items(&self.inner, f)
     }
 }
 
 #[derive(Serialize, PartialEq)]
-pub(crate) struct VersionMutationResult {
-    pub(crate) mutated_version: Version,
+pub struct VersionMutationResult {
+    pub mutated_version: Version,
 }
 
 /// Which end of the precedence-ordered version groups to select.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum BoundaryKind {
+pub enum BoundaryKind {
     Min,
     Max,
 }
 
 /// Result of selecting min/max/latest from a version list.
 #[derive(Serialize, PartialEq)]
-pub(crate) struct BoundaryVersionResult {
-    pub(crate) versions: Vec<Version>,
-    pub(crate) potentially_ambiguous: bool,
-    pub(crate) lexical_tiebreak_used: bool,
-    pub(crate) stable_filter_applied: bool,
+pub struct BoundaryVersionResult {
+    pub versions: Vec<Version>,
+    pub potentially_ambiguous: bool,
+    pub lexical_tiebreak_used: bool,
+    pub stable_filter_applied: bool,
 }
 
 impl BoundaryVersionResult {
-    pub(crate) fn boundary_versions(
+    pub fn boundary_versions(
         map: &OrderedVersionMap,
         kind: BoundaryKind,
         allow_ambiguous: bool,
@@ -678,21 +644,12 @@ impl BoundaryVersionResult {
 
 impl fmt::Display for BoundaryVersionResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for v in &self.versions {
-            writeln!(f, "{v}")?;
-        }
-        Ok(())
-    }
-}
-
-impl Termination for BoundaryVersionResult {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
+        writeln_items(&self.versions, f)
     }
 }
 
 impl VersionMutationResult {
-    pub(crate) fn set(
+    pub fn set(
         version: &Version,
         major: Option<u64>,
         minor: Option<u64>,
@@ -738,7 +695,7 @@ impl VersionMutationResult {
     // NOTE(canardleteer): We could actually do bumps on pre-release and
     //                     build-metadata, if we supported a selector and
     //                     confirmed the segment was numeric.
-    pub(crate) fn bump(
+    pub fn bump(
         version: &Version,
         major: Option<u64>,
         minor: Option<u64>,
@@ -790,7 +747,7 @@ impl VersionMutationResult {
         })
     }
 
-    pub(crate) fn bump_reset(
+    pub fn bump_reset(
         version: &Version,
         major_reset: bool,
         clear_pre_release: bool,
@@ -844,12 +801,6 @@ impl fmt::Display for VersionMutationResult {
     }
 }
 
-impl Termination for VersionMutationResult {
-    fn report(self) -> ExitCode {
-        ExitCode::SUCCESS
-    }
-}
-
 /// Invent a way to reasonably express a non-equivalent ComparisonStatement in
 /// a u8, but really, at that point, just use the YAML output.
 ///
@@ -900,7 +851,7 @@ impl fmt::Display for ComparisonStatement {
 
 /// Just a small reimplementation of std::Ordering with Serialization.
 #[derive(Debug, Serialize, PartialEq)]
-pub(crate) enum SerializableOrdering {
+pub enum SerializableOrdering {
     Less,
     Greater,
     Equal,
@@ -926,7 +877,7 @@ impl From<Ordering> for SerializableOrdering {
     }
 }
 
-pub(crate) fn version_without_build_metadata(version: &Version) -> Version {
+pub fn version_without_build_metadata(version: &Version) -> Version {
     Version {
         major: version.major,
         minor: version.minor,
@@ -935,6 +886,32 @@ pub(crate) fn version_without_build_metadata(version: &Version) -> Version {
         build: BuildMetadata::EMPTY,
     }
 }
+
+/// Exit code for compare `-e`, mirroring [ComparisonStatement] termination.
+pub fn compare_exit_code(a: &Version, b: &Version) -> i32 {
+    let a_no_build = version_without_build_metadata(a);
+    let b_no_build = version_without_build_metadata(b);
+    ordering_pair_to_exit_code(a_no_build.cmp(&b_no_build), a.cmp(b))
+}
+
+pub fn ordering_pair_to_exit_code(sem: Ordering, lex: Ordering) -> i32 {
+    match (
+        SerializableOrdering::from(sem),
+        SerializableOrdering::from(lex),
+    ) {
+        (SerializableOrdering::Equal, SerializableOrdering::Equal) => 0,
+        (s, l) => simplify_exit_code(s, l) as i32,
+    }
+}
+
+impl_success_termination!(
+    VersionExplanation,
+    FlatVersionsList,
+    OrderedVersionMap,
+    GenerateResult,
+    BoundaryVersionResult,
+    VersionMutationResult,
+);
 
 #[cfg(test)]
 mod tests {
