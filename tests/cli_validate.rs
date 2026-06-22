@@ -14,6 +14,7 @@
 //! limitations under the License.
 use proptest::prelude::*;
 use proptest_semver::*;
+use semver::Version;
 
 mod common;
 use common::subcommands::*;
@@ -66,5 +67,14 @@ proptest! {
     fn prop_validate_regex(v in arb_semver()) {
         let assert = common_cmd().arg(COMMAND_VALIDATE).arg(v).assert();
         assert.append_context(COMMAND_VALIDATE, "property testing").success();
+    }
+
+    #[test]
+    fn prop_validate_rejects_invalid_strings(s in "\\PC{1,32}") {
+        prop_assume!(Version::parse(&s).is_err());
+        let assert = common_cmd().arg(COMMAND_VALIDATE).arg(&s).assert();
+        assert.append_context(COMMAND_VALIDATE, "invalid default").failure();
+        let assert = common_cmd().arg(COMMAND_VALIDATE).arg("-s").arg(&s).assert();
+        assert.append_context(COMMAND_VALIDATE, "invalid -s").failure();
     }
 }
