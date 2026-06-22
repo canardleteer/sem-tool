@@ -266,6 +266,33 @@ pub enum Commands {
         //                     build-metadata, if we supported a selector and
         //                     confirmed the segment chosen was numeric.
     },
+    /// Reset-on-bump: increment one numeric segment and zero less significant ones.
+    ///
+    /// Additive increments without resetting lower segments → **`bump`**.
+    /// Replace or clear a segment without bumping → **`set`** (e.g.
+    /// `set <ver> --set-pre-release=""` to drop prerelease only).
+    ///
+    /// Clear flags here are bump-then-clear convenience, not a substitute for
+    /// `set`.
+    BumpReset {
+        semantic_version: Version,
+
+        /// Bump major (+1) and zero minor and patch. Default is minor-reset.
+        #[clap(long, action)]
+        major: bool,
+
+        /// Strip pre-release after the bump (preserved by default).
+        #[clap(long, action)]
+        clear_pre_release: bool,
+
+        /// Strip build metadata after the bump (preserved by default).
+        #[clap(long, action)]
+        clear_build_metadata: bool,
+
+        /// Strip both pre-release and build metadata after the bump.
+        #[clap(long, action)]
+        normal_version_only: bool,
+    },
     /// Select a single component from a valid Semantic Version.
     ///
     /// By default uses the official semver regex (spec-compliant, supports any
@@ -395,6 +422,20 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             bump_minor,
             bump_patch,
         } => bump(&semantic_version, bump_major, bump_minor, bump_patch)?.into(),
+        Commands::BumpReset {
+            semantic_version,
+            major,
+            clear_pre_release,
+            clear_build_metadata,
+            normal_version_only,
+        } => bump_reset(
+            &semantic_version,
+            major,
+            clear_pre_release,
+            clear_build_metadata,
+            normal_version_only,
+        )?
+        .into(),
         Commands::Select {
             component,
             version,
@@ -470,6 +511,22 @@ fn bump(
     patch: Option<u64>,
 ) -> Result<VersionMutationResult, Box<dyn Error>> {
     VersionMutationResult::bump(version, major, minor, patch)
+}
+
+fn bump_reset(
+    version: &Version,
+    major: bool,
+    clear_pre_release: bool,
+    clear_build_metadata: bool,
+    normal_version_only: bool,
+) -> Result<VersionMutationResult, Box<dyn Error>> {
+    VersionMutationResult::bump_reset(
+        version,
+        major,
+        clear_pre_release,
+        clear_build_metadata,
+        normal_version_only,
+    )
 }
 
 fn select(
@@ -575,6 +632,24 @@ mod tests {
             build in prop::option::of(arb_build_metadata_string()),
         ) {
             prop_assert!(super::set(&v, None, None, None, pre, build).is_ok());
+        }
+
+        #[test]
+        fn bump_reset_overflow(v in arb_version(), major_reset: bool) {
+            let overflow = if major_reset { v.major == u64::MAX } else { v.minor == u64::MAX };
+            let result = super::bump_reset(&v, major_reset, false, false, false);
+            if overflow {
+                prop_assert!(result.is_err());
+            } else {
+                prop_assert!(result.is_ok());
+                let out = result.unwrap().mutated_version;
+                if major_reset {
+                    prop_assert_eq!(out.minor, 0);
+                    prop_assert_eq!(out.patch, 0);
+                } else {
+                    prop_assert_eq!(out.patch, 0);
+                }
+            }
         }
     }
 

@@ -219,6 +219,25 @@ fn cli_insta() {
         vec![COMMAND_SELECT, "-s", "minor", "10.20.30"],
     );
 
+    insta_targets.insert(
+        "bump-reset.simple.1",
+        vec!["-o", "text", COMMAND_BUMP_RESET, "1.2.3"],
+    );
+    insta_targets.insert(
+        "bump-reset.major.1",
+        vec!["-o", "text", COMMAND_BUMP_RESET, "1.2.3", "--major"],
+    );
+    insta_targets.insert(
+        "bump-reset.clear.1",
+        vec![
+            "-o",
+            "text",
+            COMMAND_BUMP_RESET,
+            "1.2.3-rc.1+ci",
+            "--normal-version-only",
+        ],
+    );
+
     for (key, args) in insta_targets.iter() {
         assert_cmd_snapshot!(*key, cli().args(args));
     }
