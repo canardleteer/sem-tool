@@ -1310,6 +1310,150 @@ mod tests {
         }
     }
 
+    use proptest::prelude::*;
+    use proptest_semver::*;
+    use std::collections::HashMap;
+
+    fn prop_version_without_build(v: &Version) -> Version {
+        Version {
+            major: v.major,
+            minor: v.minor,
+            patch: v.patch,
+            pre: v.pre.clone(),
+            build: BuildMetadata::EMPTY,
+        }
+    }
+
+    fn prop_boundary_precedence_key(versions: &[Version], kind_max: bool) -> Version {
+        versions
+            .iter()
+            .map(prop_version_without_build)
+            .min_by(|a, b| {
+                if kind_max {
+                    b.cmp(a)
+                } else {
+                    a.cmp(b)
+                }
+            })
+            .expect("non-empty")
+    }
+
+    fn prop_boundary_group_at_key(filtered: &[Version], kind_max: bool) -> Vec<Version> {
+        let key = prop_boundary_precedence_key(filtered, kind_max);
+        filtered
+            .iter()
+            .filter(|v| prop_version_without_build(v) == key)
+            .cloned()
+            .collect()
+    }
+
+    fn prop_expected_lexical_pick(filtered: &[Version], kind_max: bool, reverse: bool) -> Version {
+        let mut group = prop_boundary_group_at_key(filtered, kind_max);
+        if reverse {
+            group.sort_by(|a, b| b.cmp(a));
+        } else {
+            group.sort();
+        }
+        if kind_max {
+            group.last().expect("non-empty group").clone()
+        } else {
+            group.first().expect("non-empty group").clone()
+        }
+    }
+
+    fn prop_boundary_ambiguous(versions: &[Version], kind_max: bool) -> bool {
+        let mut groups: HashMap<Version, usize> = HashMap::new();
+        for v in versions {
+            *groups
+                .entry(prop_version_without_build(v))
+                .or_insert(0) += 1;
+        }
+        let key = if kind_max {
+            groups.keys().max().cloned()
+        } else {
+            groups.keys().min().cloned()
+        };
+        key.and_then(|k| groups.get(&k).copied())
+            .map(|c| c > 1)
+            .unwrap_or(false)
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig {
+            fork: true,
+            cases: 256,
+            .. ProptestConfig::default()
+        })]
+        #[test]
+        fn prop_boundary_versions(
+            stable: bool,
+            reverse: bool,
+            lexical_sorting: bool,
+            allow_ambiguous: bool,
+            kind_max: bool,
+            filter in arb_optional_version_req(0.5, 2),
+            mut versions in arb_vec_versions(16),
+        ) {
+            let map = OrderedVersionMap::new(
+                &mut versions,
+                &filter,
+                lexical_sorting,
+                reverse,
+                stable,
+            );
+
+            let kind = if kind_max {
+                BoundaryKind::Max
+            } else {
+                BoundaryKind::Min
+            };
+
+            let result = BoundaryVersionResult::boundary_versions(
+                &map,
+                kind,
+                allow_ambiguous,
+                lexical_sorting,
+                stable,
+            );
+
+            if map.inner.is_empty() {
+                prop_assert!(result.is_err());
+            } else {
+                let filtered: Vec<Version> = map
+                    .inner
+                    .values()
+                    .flat_map(|group| group.iter().cloned())
+                    .collect();
+                let ambiguous = prop_boundary_ambiguous(&filtered, kind_max);
+                let expected_key = prop_boundary_precedence_key(&filtered, kind_max);
+
+                if ambiguous && !allow_ambiguous && !lexical_sorting {
+                    prop_assert!(result.is_err());
+                } else {
+                    let ok = result.expect("expected boundary success");
+                    if allow_ambiguous && ambiguous {
+                        prop_assert!(ok.versions.len() > 1);
+                        for v in &ok.versions {
+                            prop_assert_eq!(prop_version_without_build(v), expected_key.clone());
+                        }
+                    } else if lexical_sorting && ambiguous {
+                        prop_assert_eq!(ok.versions.len(), 1);
+                        prop_assert_eq!(
+                            ok.versions[0].clone(),
+                            prop_expected_lexical_pick(&filtered, kind_max, reverse)
+                        );
+                    } else {
+                        prop_assert_eq!(ok.versions.len(), 1);
+                        prop_assert_eq!(
+                            prop_version_without_build(&ok.versions[0]),
+                            expected_key
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     // ComparisonStatement
     #[test]
     fn test_comparison_statement() {
