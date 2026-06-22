@@ -13,6 +13,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 use proptest::prelude::*;
+use semver::Version;
 
 mod common;
 use common::subcommands::*;
@@ -50,18 +51,44 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn prop_generate_small(count in 0u16..10) {
-        let assert = common_cmd().arg(COMMAND_GENERATE).arg("-s").arg(count.to_string()).assert();
-        assert.append_context(COMMAND_GENERATE, "property testing").success();
-
-        // Reading back input here, and validating it would be a better test.
+    fn prop_generate_small(count in 1u16..10) {
+        let assert = common_cmd()
+            .arg("-o")
+            .arg("text")
+            .arg(COMMAND_GENERATE)
+            .arg("-s")
+            .arg(count.to_string())
+            .assert();
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+        assert.append_context(COMMAND_GENERATE, "property testing -s").success();
+        let lines: Vec<&str> = stdout
+            .lines()
+            .filter(|l| !l.is_empty())
+            .collect();
+        prop_assert_eq!(lines.len(), count as usize);
+        for line in lines {
+            prop_assert!(Version::parse(line).is_ok());
+        }
     }
 
     #[test]
-    fn prop_generate_regex(count in 0u16..10) {
-        let assert = common_cmd().arg(COMMAND_GENERATE).arg(count.to_string()).assert();
-        assert.append_context(COMMAND_GENERATE, "property testing").success();
-
-        // Reading back input here, and validating it would be a better test.
+    fn prop_generate_regex(count in 1u16..10) {
+        let assert = common_cmd()
+            .arg("-o")
+            .arg("text")
+            .arg(COMMAND_GENERATE)
+            .arg(count.to_string())
+            .assert();
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+        assert.append_context(COMMAND_GENERATE, "property testing regex").success();
+        let lines: Vec<&str> = stdout
+            .lines()
+            .filter(|l| !l.is_empty())
+            .collect();
+        prop_assert_eq!(lines.len(), count as usize);
+        for line in lines {
+            let validate = common_cmd().arg(COMMAND_VALIDATE).arg(line).assert();
+            validate.success();
+        }
     }
 }
