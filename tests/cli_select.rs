@@ -210,4 +210,37 @@ proptest! {
             .assert();
         assert.append_context(COMMAND_SELECT, "property test regex").success();
     }
+
+    #[test]
+    fn prop_select_fail_if_not_found_missing_optional(
+        version in arb_version(),
+        component in prop_oneof![Just("pre-release"), Just("build-metadata")],
+    ) {
+        prop_assume!(version.pre.is_empty());
+        prop_assume!(version.build.is_empty());
+        let assert = common_cmd()
+            .arg(COMMAND_SELECT)
+            .arg(component)
+            .arg(version.to_string())
+            .arg("--fail-if-not-found")
+            .assert();
+        assert.append_context(COMMAND_SELECT, "property test -F missing").failure();
+    }
+
+    #[test]
+    fn prop_select_required_components(
+        version in arb_version(),
+        component in prop_oneof![Just("major"), Just("minor"), Just("patch")],
+    ) {
+        let assert = common_cmd()
+            .arg("-o")
+            .arg("text")
+            .arg(COMMAND_SELECT)
+            .arg(component)
+            .arg(version.to_string())
+            .assert();
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).trim().to_string();
+        assert.append_context(COMMAND_SELECT, "property test required").success();
+        prop_assert!(!stdout.is_empty());
+    }
 }
