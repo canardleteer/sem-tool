@@ -238,6 +238,18 @@ fn cli_insta() {
         ],
     );
 
+    insta_targets.insert(
+        "sort.stable.1",
+        vec![
+            COMMAND_SORT,
+            "--stable",
+            "--flatten",
+            "1.0.0-alpha",
+            "1.0.0",
+            "2.0.0",
+        ],
+    );
+
     for (key, args) in insta_targets.iter() {
         assert_cmd_snapshot!(*key, cli().args(args));
     }

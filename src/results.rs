@@ -456,9 +456,14 @@ impl OrderedVersionMap {
         filter: &Option<VersionReq>,
         lexical_sorting: bool,
         reverse: bool,
+        stable: bool,
     ) -> Self {
         if let Some(filter) = filter {
             versions.retain(|v| filter.matches(v));
+        }
+
+        if stable {
+            versions.retain(|v| v.pre.is_empty());
         }
 
         // Generally sort the input for keys into the IndexMap.
@@ -900,7 +905,7 @@ mod tests {
             .map(|v| Version::parse(v).unwrap())
             .collect();
 
-        let test = OrderedVersionMap::new(&mut scaffold1, &None, false, false);
+        let test = OrderedVersionMap::new(&mut scaffold1, &None, false, false, false);
         assert!(test.inner.contains_key(&Version::parse("99.0.0").unwrap()));
         assert!(test.inner.contains_key(&Version::parse("100.0.0").unwrap()));
         assert!(test.inner.contains_key(&Version::parse("0.0.1").unwrap()));
@@ -933,7 +938,7 @@ mod tests {
         .map(|v| Version::parse(v).unwrap())
         .collect();
 
-        let test = OrderedVersionMap::new(&mut scaffold2, &None, false, false);
+        let test = OrderedVersionMap::new(&mut scaffold2, &None, false, false, false);
         let test_keys: Vec<Version> = test.inner.keys().cloned().collect();
         assert!(test_keys.len() == 12);
         assert!(test_keys[0] == Version::parse("0.0.0-alpha.0").unwrap());
@@ -941,7 +946,7 @@ mod tests {
         assert!(test.potentially_ambiguous);
 
         // Reverse of above test.
-        let test = OrderedVersionMap::new(&mut scaffold2, &None, false, true);
+        let test = OrderedVersionMap::new(&mut scaffold2, &None, false, true, false);
         let test_keys: Vec<Version> = test.inner.keys().cloned().collect();
         assert!(test_keys.len() == 12);
         assert!(test_keys[test_keys.len() - 1] == Version::parse("0.0.0-alpha.0").unwrap());
@@ -952,6 +957,7 @@ mod tests {
         let test = OrderedVersionMap::new(
             &mut scaffold2,
             &Some(VersionReq::parse("*").unwrap()),
+            false,
             false,
             false,
         );
@@ -996,14 +1002,14 @@ mod tests {
         .collect();
 
         // lexical sorting
-        let mut test = OrderedVersionMap::new(&mut scaffold, &None, true, false);
+        let mut test = OrderedVersionMap::new(&mut scaffold, &None, true, false, false);
         let test = FlatVersionsList::from(&mut test);
         assert!(test.versions.len() == 21);
         assert!(test.versions[0] == Version::parse("0.0.0-alpha.0+metadata").unwrap());
         assert!(test.versions[test.versions.len() - 1] == Version::parse("99.99.0-rc1.0").unwrap());
 
         // lexical sorting, reversed
-        let mut test = OrderedVersionMap::new(&mut scaffold, &None, true, true);
+        let mut test = OrderedVersionMap::new(&mut scaffold, &None, true, true, false);
         let test = FlatVersionsList::from(&mut test);
         assert!(test.versions.len() == 21);
         assert!(
@@ -1178,6 +1184,19 @@ mod tests {
 
         let normal = VersionMutationResult::bump_reset(&v, false, false, false, true).unwrap();
         assert_eq!(normal.mutated_version.to_string(), "1.3.0");
+    }
+
+    #[test]
+    fn test_ordered_version_map_stable() {
+        let mut versions: Vec<Version> = ["1.0.0-alpha", "1.0.0", "2.0.0"]
+            .iter()
+            .map(|s| Version::parse(s).unwrap())
+            .collect();
+        let map = OrderedVersionMap::new(&mut versions, &None, false, false, true);
+        assert_eq!(map.inner.len(), 2);
+        for key in map.inner.keys() {
+            assert!(key.pre.is_empty());
+        }
     }
 
     // ComparisonStatement
