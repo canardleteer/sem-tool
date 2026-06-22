@@ -105,13 +105,7 @@ fn boundary_precedence_key(versions: &[Version], kind_max: bool) -> Version {
     versions
         .iter()
         .map(version_without_build)
-        .min_by(|a, b| {
-            if kind_max {
-                b.cmp(a)
-            } else {
-                a.cmp(b)
-            }
-        })
+        .min_by(|a, b| if kind_max { b.cmp(a) } else { a.cmp(b) })
         .expect("non-empty")
 }
 
@@ -207,6 +201,7 @@ fn boundary_cmd_args(
     args
 }
 
+#[allow(clippy::too_many_arguments)]
 fn boundary_test_generic(
     command: &'static str,
     kind_max: bool,
@@ -219,15 +214,7 @@ fn boundary_test_generic(
 ) {
     let filtered = apply_filter(&apply_stable(&versions, stable), &filter);
     if filtered.is_empty() {
-        let args = boundary_cmd_args(
-            command,
-            stable,
-            reverse,
-            false,
-            false,
-            &filter,
-            &versions,
-        );
+        let args = boundary_cmd_args(command, stable, reverse, false, false, &filter, &versions);
         common_cmd()
             .args(&args)
             .assert()
@@ -268,7 +255,10 @@ fn boundary_test_generic(
             }
         } else if lexical_sorting && ambiguous {
             assert_eq!(outputs.len(), 1);
-            assert_eq!(outputs[0], expected_lexical_pick(&filtered, kind_max, reverse));
+            assert_eq!(
+                outputs[0],
+                expected_lexical_pick(&filtered, kind_max, reverse)
+            );
         } else {
             assert_eq!(outputs.len(), 1);
             assert_eq!(version_without_build(&outputs[0]), expected_key);
