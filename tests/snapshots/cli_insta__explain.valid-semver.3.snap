@@ -18,11 +18,11 @@ prerelease:
 - kind: Ascii
   value: rc
 - kind: Numeric
-  value: '0'
+  value: "0"
 - kind: Ascii
   value: a
 - kind: Numeric
-  value: '1'
+  value: "1"
 - kind: Ascii
   value: b
 

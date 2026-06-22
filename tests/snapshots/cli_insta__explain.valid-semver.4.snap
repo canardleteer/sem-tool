@@ -18,10 +18,10 @@ build-metadata:
 - kind: Ascii
   value: a
 - kind: Numeric
-  value: '0'
+  value: "0"
 - kind: Ascii
   value: b
 - kind: Numeric
-  value: '1'
+  value: "1"
 
 ----- stderr -----
