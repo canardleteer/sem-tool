@@ -485,6 +485,7 @@ fn select(
 mod tests {
     use proptest::prelude::*;
     use proptest_semver::*;
+    use semver::Version;
 
     use crate::{SemverComponent, SerializableOrdering, version_without_build_metadata};
 
@@ -556,5 +557,30 @@ mod tests {
             // Just ensure we don't panic; optional components may be None
             let _ = format!("{result}");
         }
+
+        #[test]
+        fn bump_overflow(major in 1u64..=u64::MAX, minor in any::<u64>(), patch in any::<u64>()) {
+            let v = Version::parse(&format!("{major}.{minor}.{patch}")).unwrap();
+            if major == u64::MAX {
+                prop_assert!(super::bump(&v, Some(1), None, None).is_err());
+            } else {
+                prop_assert!(super::bump(&v, Some(1), None, None).is_ok());
+            }
+        }
+
+        #[test]
+        fn set_valid_pre_build(
+            v in arb_version(),
+            pre in prop::option::of(arb_pre_release_string()),
+            build in prop::option::of(arb_build_metadata_string()),
+        ) {
+            prop_assert!(super::set(&v, None, None, None, pre, build).is_ok());
+        }
+    }
+
+    #[test]
+    fn cli_short_options_do_not_conflict() {
+        use clap::CommandFactory;
+        crate::Args::command().debug_assert();
     }
 }
