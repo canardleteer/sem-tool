@@ -1328,13 +1328,7 @@ mod tests {
         versions
             .iter()
             .map(prop_version_without_build)
-            .min_by(|a, b| {
-                if kind_max {
-                    b.cmp(a)
-                } else {
-                    a.cmp(b)
-                }
-            })
+            .min_by(|a, b| if kind_max { b.cmp(a) } else { a.cmp(b) })
             .expect("non-empty")
     }
 
@@ -1364,9 +1358,7 @@ mod tests {
     fn prop_boundary_ambiguous(versions: &[Version], kind_max: bool) -> bool {
         let mut groups: HashMap<Version, usize> = HashMap::new();
         for v in versions {
-            *groups
-                .entry(prop_version_without_build(v))
-                .or_insert(0) += 1;
+            *groups.entry(prop_version_without_build(v)).or_insert(0) += 1;
         }
         let key = if kind_max {
             groups.keys().max().cloned()
