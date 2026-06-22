@@ -101,6 +101,43 @@ fn version_without_build(v: &Version) -> Version {
     }
 }
 
+fn boundary_precedence_key(versions: &[Version], kind_max: bool) -> Version {
+    versions
+        .iter()
+        .map(version_without_build)
+        .min_by(|a, b| {
+            if kind_max {
+                b.cmp(a)
+            } else {
+                a.cmp(b)
+            }
+        })
+        .expect("non-empty")
+}
+
+fn boundary_group_at_key(filtered: &[Version], kind_max: bool) -> Vec<Version> {
+    let key = boundary_precedence_key(filtered, kind_max);
+    filtered
+        .iter()
+        .filter(|v| version_without_build(v) == key)
+        .cloned()
+        .collect()
+}
+
+fn expected_lexical_pick(filtered: &[Version], kind_max: bool, reverse: bool) -> Version {
+    let mut group = boundary_group_at_key(filtered, kind_max);
+    if reverse {
+        group.sort_by(|a, b| b.cmp(a));
+    } else {
+        group.sort();
+    }
+    if kind_max {
+        group.last().expect("non-empty group").clone()
+    } else {
+        group.first().expect("non-empty group").clone()
+    }
+}
+
 fn boundary_ambiguous(versions: &[Version], kind_max: bool) -> bool {
     if versions.is_empty() {
         return false;
@@ -144,6 +181,7 @@ fn boundary_test_generic(
     command: &'static str,
     kind_max: bool,
     stable: bool,
+    reverse: bool,
     lexical_sorting: bool,
     allow_ambiguous: bool,
     filter: Option<VersionReq>,
@@ -154,6 +192,9 @@ fn boundary_test_generic(
         let mut args = vec!["-o".to_string(), "text".to_string(), command.to_string()];
         if stable {
             args.push("--stable".to_string());
+        }
+        if reverse {
+            args.push("--reverse".to_string());
         }
         if let Some(filter) = &filter {
             args.push("--filter".to_string());
@@ -169,10 +210,14 @@ fn boundary_test_generic(
     }
 
     let ambiguous = boundary_ambiguous(&filtered, kind_max);
+    let expected_key = boundary_precedence_key(&filtered, kind_max);
 
     let mut args = vec!["-o".to_string(), "text".to_string(), command.to_string()];
     if stable {
         args.push("--stable".to_string());
+    }
+    if reverse {
+        args.push("--reverse".to_string());
     }
     if lexical_sorting {
         args.push("--lexical-sorting".to_string());
@@ -200,8 +245,15 @@ fn boundary_test_generic(
         assert!(!outputs.is_empty());
         if allow_ambiguous && ambiguous {
             assert!(outputs.len() > 1);
+            for out in &outputs {
+                assert_eq!(version_without_build(out), expected_key);
+            }
+        } else if lexical_sorting && ambiguous {
+            assert_eq!(outputs.len(), 1);
+            assert_eq!(outputs[0], expected_lexical_pick(&filtered, kind_max, reverse));
         } else {
             assert_eq!(outputs.len(), 1);
+            assert_eq!(version_without_build(&outputs[0]), expected_key);
         }
     }
 }
@@ -215,23 +267,25 @@ proptest! {
     #[test]
     fn prop_max_small(
         stable: bool,
+        reverse: bool,
         lexical_sorting: bool,
         allow_ambiguous: bool,
         filter in arb_optional_version_req(0.5, 2),
         versions in arb_vec_versions(BOUNDARY_TEST_VERSION_COUNT_SMALL),
     ) {
-        boundary_test_generic(COMMAND_MAX, true, stable, lexical_sorting, allow_ambiguous, filter, versions);
+        boundary_test_generic(COMMAND_MAX, true, stable, reverse, lexical_sorting, allow_ambiguous, filter, versions);
     }
 
     #[test]
     fn prop_min_small(
         stable: bool,
+        reverse: bool,
         lexical_sorting: bool,
         allow_ambiguous: bool,
         filter in arb_optional_version_req(0.5, 2),
         versions in arb_vec_versions(BOUNDARY_TEST_VERSION_COUNT_SMALL),
     ) {
-        boundary_test_generic(COMMAND_MIN, false, stable, lexical_sorting, allow_ambiguous, filter, versions);
+        boundary_test_generic(COMMAND_MIN, false, stable, reverse, lexical_sorting, allow_ambiguous, filter, versions);
     }
 
     #[test]
