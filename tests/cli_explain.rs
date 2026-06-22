@@ -38,9 +38,29 @@ fn cli_explain_basic_cases() {
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig {
+        fork: true,
+        cases: 256,
+        .. ProptestConfig::default()
+    })]
     #[test]
     fn prop_explain(v in arb_version()) {
         let assert = common_cmd().arg(COMMAND_EXPLAIN).arg(v.to_string()).assert();
         assert.append_context(COMMAND_EXPLAIN, "property test").success();
+    }
+
+    #[test]
+    fn prop_explain_output_contains_core_version(v in arb_version()) {
+        let assert = common_cmd()
+            .arg("-o")
+            .arg("text")
+            .arg(COMMAND_EXPLAIN)
+            .arg(v.to_string())
+            .assert();
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+        assert.append_context(COMMAND_EXPLAIN, "property test text output").success();
+        assert!(stdout.contains(&format!("Major: {}", v.major)));
+        assert!(stdout.contains(&format!("Minor: {}", v.minor)));
+        assert!(stdout.contains(&format!("Patch: {}", v.patch)));
     }
 }
