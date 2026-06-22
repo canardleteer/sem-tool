@@ -10,8 +10,9 @@ pub(crate) mod subcommands {
     pub(crate) const COMMAND_VALIDATE: &str = "validate";
     pub(crate) const COMMAND_SET: &str = "set";
     pub(crate) const COMMAND_BUMP: &str = "bump";
+    pub(crate) const COMMAND_BUMP_RESET: &str = "bump-reset";
     pub(crate) const COMMAND_SELECT: &str = "select";
-    pub(crate) const ALL_COMMANDS: [&str; 9] = [
+    pub(crate) const ALL_COMMANDS: [&str; 10] = [
         COMMAND_COMPARE,
         COMMAND_EXPLAIN,
         COMMAND_FILTER_TEST,
@@ -19,6 +20,7 @@ pub(crate) mod subcommands {
         COMMAND_SORT,
         COMMAND_VALIDATE,
         COMMAND_BUMP,
+        COMMAND_BUMP_RESET,
         COMMAND_SET,
         COMMAND_SELECT,
     ];

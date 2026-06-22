@@ -697,6 +697,53 @@ impl VersionMutationResult {
             mutated_version: response,
         })
     }
+
+    pub(crate) fn bump_reset(
+        version: &Version,
+        major_reset: bool,
+        clear_pre_release: bool,
+        clear_build_metadata: bool,
+        normal_version_only: bool,
+    ) -> Result<VersionMutationResult, Box<dyn Error>> {
+        let mut response = version.clone();
+
+        if major_reset {
+            response.major = match response.major.checked_add(1) {
+                Some(m) => m,
+                None => {
+                    return Err(
+                        format!("major bump-reset ({} + 1) overflows u64", response.major).into(),
+                    );
+                }
+            };
+            response.minor = 0;
+            response.patch = 0;
+        } else {
+            response.minor = match response.minor.checked_add(1) {
+                Some(m) => m,
+                None => {
+                    return Err(
+                        format!("minor bump-reset ({} + 1) overflows u64", response.minor).into(),
+                    );
+                }
+            };
+            response.patch = 0;
+        }
+
+        let clear_pre = normal_version_only || clear_pre_release;
+        let clear_build = normal_version_only || clear_build_metadata;
+
+        if clear_pre {
+            response.pre = Prerelease::EMPTY;
+        }
+        if clear_build {
+            response.build = BuildMetadata::EMPTY;
+        }
+
+        Ok(VersionMutationResult {
+            mutated_version: response,
+        })
+    }
 }
 
 impl fmt::Display for VersionMutationResult {
@@ -1115,6 +1162,22 @@ mod tests {
         assert!(
             VersionMutationResult::bump(&base_version, Some(2), Some(3), Some(u64::MAX)).is_err()
         );
+    }
+
+    #[test]
+    fn test_bump_reset() {
+        let v = Version::parse("1.2.3-rc.1+ci.42").unwrap();
+        let minor = VersionMutationResult::bump_reset(&v, false, false, false, false).unwrap();
+        assert_eq!(minor.mutated_version.to_string(), "1.3.0-rc.1+ci.42");
+
+        let major = VersionMutationResult::bump_reset(&v, true, false, false, false).unwrap();
+        assert_eq!(major.mutated_version.to_string(), "2.0.0-rc.1+ci.42");
+
+        let cleared = VersionMutationResult::bump_reset(&v, false, true, true, false).unwrap();
+        assert_eq!(cleared.mutated_version.to_string(), "1.3.0");
+
+        let normal = VersionMutationResult::bump_reset(&v, false, false, false, true).unwrap();
+        assert_eq!(normal.mutated_version.to_string(), "1.3.0");
     }
 
     // ComparisonStatement
