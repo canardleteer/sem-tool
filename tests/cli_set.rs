@@ -17,7 +17,6 @@ use proptest_semver::*;
 
 mod common;
 use common::subcommands::*;
-use semver::{BuildMetadata, Prerelease};
 
 use crate::common::common_cmd;
 
@@ -55,7 +54,7 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn prop_validate_small(v in arb_version(), major: Option<u64>, minor: Option<u64>, patch: Option<u64>, pre_release: Option<String>, build_metadata: Option<String>) {
+    fn prop_validate_small(v in arb_version(), major: Option<u64>, minor: Option<u64>, patch: Option<u64>, pre_release in prop::option::of(arb_pre_release_string()), build_metadata in prop::option::of(arb_build_metadata_string())) {
         let mut assert = common_cmd();
         assert.arg(COMMAND_SET).arg(v.to_string());
 
@@ -80,18 +79,14 @@ proptest! {
             }
         };
 
-        let (pre_release_set, pre_release_checked) = match pre_release.clone() {
+        let (pre_release_set, pre_release_checked) = match &pre_release {
             None => ("".to_string(), true),
-            Some(p) => {
-                (format!("--set-pre-release={}", p), Prerelease::new(&p).is_ok())
-            }
+            Some(p) => (format!("--set-pre-release={}", p), true),
         };
 
-        let (build_metadata_set, build_metadata_checked) = match build_metadata.clone() {
+        let (build_metadata_set, build_metadata_checked) = match &build_metadata {
             None => ("".to_string(), true),
-            Some(p) => {
-                (format!("--set-build-metadata={}", p), BuildMetadata::new(&p).is_ok())
-            }
+            Some(p) => (format!("--set-build-metadata={}", p), true),
         };
 
         if major.is_some() {
