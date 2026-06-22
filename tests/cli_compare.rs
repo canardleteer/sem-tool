@@ -14,11 +14,51 @@
 //! limitations under the License.
 use proptest::prelude::*;
 use proptest_semver::*;
+use semver::Version;
 
 mod common;
 use common::subcommands::*;
 
 use crate::common::common_cmd;
+
+fn compare_exit_code(a: &Version, b: &Version) -> i32 {
+    let sem = {
+        let a_nb = strip_build(a);
+        let b_nb = strip_build(b);
+        a_nb.cmp(&b_nb)
+    };
+    let lex = a.cmp(b);
+    ordering_pair_to_exit_code(sem, lex)
+}
+
+fn strip_build(v: &Version) -> Version {
+    Version {
+        major: v.major,
+        minor: v.minor,
+        patch: v.patch,
+        pre: v.pre.clone(),
+        build: semver::BuildMetadata::EMPTY,
+    }
+}
+
+fn ordering_pair_to_exit_code(sem: std::cmp::Ordering, lex: std::cmp::Ordering) -> i32 {
+    use std::cmp::Ordering::*;
+    let s = match sem {
+        Less => 0,
+        Equal => 1,
+        Greater => 2,
+    };
+    let l = match lex {
+        Less => 0,
+        Equal => 1,
+        Greater => 2,
+    };
+    if s == 1 && l == 1 {
+        0
+    } else {
+        100 + s * 10 + l
+    }
+}
 
 #[test]
 fn cli_compare_invalid_input() {
@@ -161,20 +201,49 @@ proptest! {
         .. ProptestConfig::default()
     })]
     #[test]
-    fn filter_test_semantic_equal(a in arb_version(), b in arb_version()) {
-        let assert = common_cmd().arg(COMMAND_COMPARE).arg("-s").arg(a.to_string()).arg(b.to_string()).assert();
-        assert.append_context(COMMAND_COMPARE, "property test: -s").success();
-
-        // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.
+    fn prop_compare_no_exit_status(version_a in arb_version(), version_b in arb_version()) {
+        let assert = common_cmd()
+            .arg(COMMAND_COMPARE)
+            .arg(version_a.to_string())
+            .arg(version_b.to_string())
+            .assert();
+        assert.append_context(COMMAND_COMPARE, "property test no -e").success();
     }
 
     #[test]
-    fn filter_test_compare_no_opts(version_a in arb_version(), version_b in arb_version()) {
-        let assert = common_cmd().arg(COMMAND_COMPARE).arg("-s").arg(version_a.to_string()).arg(version_b.to_string()).assert();
-        assert.append_context(COMMAND_COMPARE, "property test").success();
+    fn prop_compare_set_exit_status(
+        version_a in arb_version(),
+        version_b in arb_version(),
+        semantic_exit_status in any::<bool>(),
+    ) {
+        let mut cmd = common_cmd();
+        cmd.arg(COMMAND_COMPARE)
+            .arg("-e")
+            .arg(version_a.to_string())
+            .arg(version_b.to_string());
+        if semantic_exit_status {
+            cmd.arg("-s");
+        }
 
-        // We don't enable `--set-exit-status`, so as long as the input is clean, we should succeed.
+        let expected = compare_exit_code(&version_a, &version_b);
+        let assert = cmd.assert();
+        if semantic_exit_status && strip_build(&version_a) == strip_build(&version_b) {
+            assert.append_context(COMMAND_COMPARE, "property test -es").success();
+        } else {
+            assert
+                .append_context(COMMAND_COMPARE, "property test -e")
+                .code(expected);
+        }
     }
 
-    // NOTE(canardleteer): A more robust test case here, would be for "-s" & "-se"
+    #[test]
+    fn prop_compare_semantic_exit_without_e(version_a in arb_version(), version_b in arb_version()) {
+        let assert = common_cmd()
+            .arg(COMMAND_COMPARE)
+            .arg("-s")
+            .arg(version_a.to_string())
+            .arg(version_b.to_string())
+            .assert();
+        assert.append_context(COMMAND_COMPARE, "property test -s only").success();
+    }
 }
