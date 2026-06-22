@@ -14,7 +14,8 @@
 //! limitations under the License.
 use proptest::prelude::*;
 use proptest_semver::*;
-use semver::{Version, VersionReq};
+use semver::{BuildMetadata, Version, VersionReq};
+use std::collections::HashMap;
 
 mod common;
 use common::subcommands::*;
@@ -148,10 +149,29 @@ const SORT_TEST_VERSION_COUNT_SMALL: usize = 32;
 #[cfg(not(windows))]
 const SORT_TEST_VERSION_COUNT_LARGE: usize = 128;
 
+fn version_without_build(v: &Version) -> Version {
+    Version {
+        major: v.major,
+        minor: v.minor,
+        patch: v.patch,
+        pre: v.pre.clone(),
+        build: BuildMetadata::EMPTY,
+    }
+}
+
+fn input_potentially_ambiguous(versions: &[Version]) -> bool {
+    let mut counts: HashMap<Version, usize> = HashMap::new();
+    for v in versions {
+        *counts.entry(version_without_build(v)).or_insert(0) += 1;
+    }
+    counts.values().any(|&c| c > 1)
+}
+
 fn sort_test_generic(
     lexical_sorting: bool,
     reverse: bool,
     flatten: bool,
+    fail_if_potentially_ambiguous: bool,
     filter: Option<VersionReq>,
     versions: Vec<Version>,
 ) {
@@ -164,6 +184,9 @@ fn sort_test_generic(
     }
     if flatten {
         args.push("--flatten".to_string());
+    }
+    if fail_if_potentially_ambiguous {
+        args.push("--fail-if-potentially-ambiguous".to_string());
     }
 
     if let Some(filter) = filter {
@@ -179,7 +202,14 @@ fn sort_test_generic(
     );
 
     let assert = common_cmd().args(&args).assert();
-    assert.append_context(COMMAND_SORT, "prop test").success();
+    let ambiguous = input_potentially_ambiguous(&versions);
+    if fail_if_potentially_ambiguous && ambiguous {
+        assert
+            .append_context(COMMAND_SORT, "prop test ambiguous")
+            .failure();
+    } else {
+        assert.append_context(COMMAND_SORT, "prop test").success();
+    }
 }
 
 proptest! {
@@ -194,8 +224,8 @@ proptest! {
     // Using some large number of filters is unlikely to provide us with half the
     // test cases,
     #[test]
-    fn sort_test_small(lexical_sorting: bool, reverse: bool, flatten: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_SMALL)) {
-        sort_test_generic(lexical_sorting, reverse, flatten, filter, versions);
+    fn sort_test_small(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_SMALL)) {
+        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, filter, versions);
     }
 
     // Since the filters are incredibly complex from the framework, the odds of
@@ -207,7 +237,7 @@ proptest! {
     // change the meaning of "large for windows" instead.
     #[cfg(not(windows))]
     #[test]
-    fn sort_test_large(lexical_sorting: bool, reverse: bool, flatten: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_LARGE)) {
-        sort_test_generic(lexical_sorting, reverse, flatten, filter, versions);
+    fn sort_test_large(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_LARGE)) {
+        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, filter, versions);
     }
 }
