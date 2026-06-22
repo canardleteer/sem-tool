@@ -64,9 +64,41 @@ pub struct Args {
     out: OutputFormat,
 }
 
+/// Shared arguments for min, max, and latest.
+#[derive(clap::Args, Debug, Clone)]
+struct BoundaryListArgs {
+    #[clap(long, short = 'f', default_value = None)]
+    /// Only consider versions that match a filter.
+    ///
+    /// See `sort --help` for VersionReq documentation.
+    filter: Option<VersionReq>,
+
+    #[clap(long, action)]
+    /// Lexical tiebreak when build-metadata variants share precedence (SemVer §10).
+    ///
+    /// WARNING: non-spec total order; sets `lexical_tiebreak_used` in output.
+    lexical_sorting: bool,
+
+    #[clap(long, short = 'r', action)]
+    /// Reverses ordering of input before grouping (see `sort --help`).
+    reverse: bool,
+
+    #[clap(long, action)]
+    /// Exclude versions with non-empty pre-release before aggregation.
+    stable: bool,
+
+    #[clap(long, action)]
+    /// When the boundary group has multiple build-metadata variants, emit all
+    /// ties instead of failing.
+    allow_ambiguous: bool,
+
+    /// Versions as arguments, or read one per line from stdin when omitted.
+    versions: Option<Vec<Version>>,
+}
+
 /// All commands available
 #[derive(Subcommand, Debug, Clone)]
-pub enum Commands {
+enum Commands {
     /// Explain a valid Semantic Version as parsed by the spec.
     ///
     /// Breaks apart the Semantic Version, into it's individual components.
@@ -303,6 +335,28 @@ pub enum Commands {
         #[clap(long, action)]
         normal_version_only: bool,
     },
+    /// Return the minimum semantic precedence version from a list.
+    ///
+    /// For a full grouped list use **`sort`** (and `sort --flatten` for
+    /// scripting). For global ambiguity across any tie group use
+    /// **`sort --fail-if-potentially-ambiguous`**.
+    Min {
+        #[command(flatten)]
+        boundary: BoundaryListArgs,
+    },
+    /// Return the maximum semantic precedence version from a list.
+    ///
+    /// For a full grouped list use **`sort`**. For latest stable among inputs
+    /// use **`max --stable`** (documented prerelease filter).
+    Max {
+        #[command(flatten)]
+        boundary: BoundaryListArgs,
+    },
+    /// Alias for **`max`**.
+    Latest {
+        #[command(flatten)]
+        boundary: BoundaryListArgs,
+    },
     /// Select a single component from a valid Semantic Version.
     ///
     /// By default uses the official semver regex (spec-compliant, supports any
@@ -360,38 +414,15 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             fail_if_potentially_ambiguous,
             stable,
         } => {
-            let mut parsed_versions = Vec::new();
+            let mut parsed_versions = parse_versions(versions)?;
 
-            // Read from stdin, or pass forward the pre-parsed list from the arguments
-            match versions {
-                Some(versions) => parsed_versions = versions,
-                None => {
-                    let lines = io::stdin().lines();
-                    for (line_no, line) in lines.enumerate() {
-                        match line {
-                            Ok(line) => {
-                                let line = line.trim();
-                                parsed_versions.push(Version::parse(line)
-                                .map_err(|e| {
-                                    eprintln!("unable to parse an enumerated version: line {line_no}: {line}: {e}");
-                                    e
-                                })?);
-                                Ok(())
-                            }
-                            Err(e) => {
-                                eprintln!("unable to read from stdin: {e}");
-                                Err(ApplicationError::InvalidArgument {
-                                    expected: "to be able to read from stdin".to_string(),
-                                    found: e.to_string(),
-                                })
-                            }
-                        }?
-                    }
-                }
-            }
-
-            let mut ordered_version_list =
-                sort(&mut parsed_versions, &filter, lexical_sorting, reverse, stable);
+            let mut ordered_version_list = sort(
+                &mut parsed_versions,
+                &filter,
+                lexical_sorting,
+                reverse,
+                stable,
+            );
 
             if fail_if_potentially_ambiguous && ordered_version_list.potentially_ambiguous() {
                 return Err(Box::new(misc::ApplicationError::FailedRequirementError {
@@ -447,6 +478,9 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             normal_version_only,
         )?
         .into(),
+        Commands::Min { boundary } => boundary_versions(BoundaryKind::Min, boundary)?.into(),
+        Commands::Max { boundary } => boundary_versions(BoundaryKind::Max, boundary)?.into(),
+        Commands::Latest { boundary } => boundary_versions(BoundaryKind::Max, boundary)?.into(),
         Commands::Select {
             component,
             version,
@@ -473,6 +507,37 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
     Ok(ExitOutcome::new(result, ignore_exit_status_from_output))
 }
 
+fn parse_versions(versions: Option<Vec<Version>>) -> Result<Vec<Version>, Box<dyn Error>> {
+    match versions {
+        Some(versions) => Ok(versions),
+        None => {
+            let mut parsed_versions = Vec::new();
+            let lines = io::stdin().lines();
+            for (line_no, line) in lines.enumerate() {
+                match line {
+                    Ok(line) => {
+                        let line = line.trim();
+                        parsed_versions.push(Version::parse(line).map_err(|e| {
+                            eprintln!(
+                                "unable to parse an enumerated version: line {line_no}: {line}: {e}"
+                            );
+                            e
+                        })?);
+                    }
+                    Err(e) => {
+                        eprintln!("unable to read from stdin: {e}");
+                        return Err(Box::new(ApplicationError::InvalidArgument {
+                            expected: "to be able to read from stdin".to_string(),
+                            found: e.to_string(),
+                        }));
+                    }
+                }
+            }
+            Ok(parsed_versions)
+        }
+    }
+}
+
 fn sort(
     versions: &mut Vec<Version>,
     filter: &Option<VersionReq>,
@@ -481,6 +546,32 @@ fn sort(
     stable: bool,
 ) -> OrderedVersionMap {
     OrderedVersionMap::new(versions, filter, lexical_sorting, reverse, stable)
+}
+
+fn boundary_versions(
+    kind: BoundaryKind,
+    args: BoundaryListArgs,
+) -> Result<BoundaryVersionResult, Box<dyn Error>> {
+    let BoundaryListArgs {
+        filter,
+        lexical_sorting,
+        reverse,
+        stable,
+        allow_ambiguous,
+        versions,
+    } = args;
+
+    let mut parsed_versions = parse_versions(versions)?;
+    let map = sort(
+        &mut parsed_versions,
+        &filter,
+        lexical_sorting,
+        reverse,
+        stable,
+    );
+
+    BoundaryVersionResult::boundary_versions(&map, kind, allow_ambiguous, lexical_sorting, stable)
+        .map_err(|e| e.into())
 }
 
 /// Returns the semantic and lexical equivalence of 2 versions.
@@ -638,15 +729,6 @@ mod tests {
         }
 
         #[test]
-        fn set_valid_pre_build(
-            v in arb_version(),
-            pre in prop::option::of(arb_pre_release_string()),
-            build in prop::option::of(arb_build_metadata_string()),
-        ) {
-            prop_assert!(super::set(&v, None, None, None, pre, build).is_ok());
-        }
-
-        #[test]
         fn bump_reset_overflow(v in arb_version(), major_reset: bool) {
             let overflow = if major_reset { v.major == u64::MAX } else { v.minor == u64::MAX };
             let result = super::bump_reset(&v, major_reset, false, false, false);
@@ -662,6 +744,15 @@ mod tests {
                     prop_assert_eq!(out.patch, 0);
                 }
             }
+        }
+
+        #[test]
+        fn set_valid_pre_build(
+            v in arb_version(),
+            pre in prop::option::of(arb_pre_release_string()),
+            build in prop::option::of(arb_build_metadata_string()),
+        ) {
+            prop_assert!(super::set(&v, None, None, None, pre, build).is_ok());
         }
     }
 

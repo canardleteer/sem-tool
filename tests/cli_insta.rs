@@ -237,13 +237,36 @@ fn cli_insta() {
             "--normal-version-only",
         ],
     );
-
     insta_targets.insert(
         "sort.stable.1",
         vec![
             COMMAND_SORT,
             "--stable",
             "--flatten",
+            "1.0.0-alpha",
+            "1.0.0",
+            "2.0.0",
+        ],
+    );
+    insta_targets.insert(
+        "max.simple.1",
+        vec!["-o", "text", COMMAND_MAX, "1.0.0", "2.0.0", "1.5.0"],
+    );
+    insta_targets.insert(
+        "min.simple.1",
+        vec!["-o", "text", COMMAND_MIN, "1.0.0", "2.0.0", "1.5.0"],
+    );
+    insta_targets.insert(
+        "latest.alias.1",
+        vec!["-o", "text", COMMAND_LATEST, "1.0.0", "2.0.0"],
+    );
+    insta_targets.insert(
+        "max.stable.1",
+        vec![
+            "-o",
+            "text",
+            COMMAND_MAX,
+            "--stable",
             "1.0.0-alpha",
             "1.0.0",
             "2.0.0",

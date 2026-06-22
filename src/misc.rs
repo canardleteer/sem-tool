@@ -97,6 +97,8 @@ pub(crate) enum SubcommandResult {
     JustAVersion(results::VersionMutationResult),
     /// Single component selection result
     SelectResult(results::SelectResult),
+    /// Boundary min/max/latest selection
+    BoundaryVersionResult(results::BoundaryVersionResult),
 }
 
 impl From<results::ComparisonStatement> for SubcommandResult {
@@ -152,6 +154,12 @@ impl From<results::SelectResult> for SubcommandResult {
     }
 }
 
+impl From<results::BoundaryVersionResult> for SubcommandResult {
+    fn from(value: results::BoundaryVersionResult) -> Self {
+        Self::BoundaryVersionResult(value)
+    }
+}
+
 impl Termination for SubcommandResult {
     // NOTE(canardleteer): only expected to be called along certain code paths
     //                     (at least for now).
@@ -195,6 +203,9 @@ impl fmt::Display for SubcommandResult {
                 write!(f, "{}", v)
             }
             Self::SelectResult(v) => {
+                write!(f, "{}", v)
+            }
+            Self::BoundaryVersionResult(v) => {
                 write!(f, "{}", v)
             }
         }
