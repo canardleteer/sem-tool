@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.13](https://github.com/canardleteer/sem-tool/compare/v0.1.12...v0.1.13) - 2026-06-22
+
+### Added
+
+- *(cli)* add min, max, and latest subcommands
+- *(sort)* add opt-in --stable prerelease filter
+- *(bump-reset)* add reset-on-bump subcommand
+
+### Other
+
+- shrink library surface and fix latest subcommand alias
+- *(test)* disable flaky validate proptest on Windows
+- simplify CLI internals without changing behavior
+- apply rustfmt to proptest additions
+- *(min-max)* allow clippy on boundary test helper
+- *(results)* add in-process boundary version proptest
+- *(sort)* cover stable empty and filtered output in proptest
+- *(latest)* sweep flags in alias proptest
+- *(min-max)* add reverse and boundary semantic proptests
+- *(cli)* document bump-reset, min/max, and --stable
+- *(cli)* in-process bump/set props and debug_assert
+- *(validate)* reject invalid strings in proptest
+- *(set)* use proptest-semver pre/build generators
+- *(select)* cover fail-if-not-found and required components
+- *(sort)* cover fail-if-potentially-ambiguous in proptest
+- *(generate)* validate generated semver output
+- *(explain)* add output content proptests
+- *(compare)* strengthen exit-code proptests
+- *(deps)* bump rand, rand_regex, and rumdl action.
+- *(deps)* bump actions/checkout from 6 to 7
+
 ## [0.1.12](https://github.com/canardleteer/sem-tool/compare/v0.1.11...v0.1.12) - 2026-06-21
 
 ### Other
