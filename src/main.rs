@@ -187,6 +187,16 @@ pub enum Commands {
         /// versions (multiple matching M.M.P-PR, but non-matching metadata).
         fail_if_potentially_ambiguous: bool,
 
+        /// Exclude versions with a non-empty pre-release before ordering.
+        ///
+        /// Documented filter opinion (peer `latest --stable` pattern), not
+        /// SemVer precedence. Build metadata is retained.
+        ///
+        /// For a full grouped list including prereleases, use `sort` without
+        /// this flag.
+        #[clap(long, action)]
+        stable: bool,
+
         /// If no versions are present, then the tool will read from stdin, one
         /// version per line.
         versions: Option<Vec<Version>>,
@@ -348,6 +358,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             reverse,
             flatten,
             fail_if_potentially_ambiguous,
+            stable,
         } => {
             let mut parsed_versions = Vec::new();
 
@@ -380,7 +391,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             }
 
             let mut ordered_version_list =
-                sort(&mut parsed_versions, &filter, lexical_sorting, reverse);
+                sort(&mut parsed_versions, &filter, lexical_sorting, reverse, stable);
 
             if fail_if_potentially_ambiguous && ordered_version_list.potentially_ambiguous() {
                 return Err(Box::new(misc::ApplicationError::FailedRequirementError {
@@ -467,8 +478,9 @@ fn sort(
     filter: &Option<VersionReq>,
     lexical_sorting: bool,
     reverse: bool,
+    stable: bool,
 ) -> OrderedVersionMap {
-    OrderedVersionMap::new(versions, filter, lexical_sorting, reverse)
+    OrderedVersionMap::new(versions, filter, lexical_sorting, reverse, stable)
 }
 
 /// Returns the semantic and lexical equivalence of 2 versions.
@@ -590,9 +602,9 @@ mod tests {
         }
 
         #[test]
-        fn sort(versions in arb_vec_versions(256), filter in arb_optional_version_req(0.5, MAX_COMPARATORS_IN_VERSION_REQ_STRING), lexical_sorting in any::<bool>(), reverse in any::<bool>()) {
+        fn sort(versions in arb_vec_versions(256), filter in arb_optional_version_req(0.5, MAX_COMPARATORS_IN_VERSION_REQ_STRING), lexical_sorting in any::<bool>(), reverse in any::<bool>(), stable in any::<bool>()) {
             let mut versions = versions.clone();
-            super::sort(&mut versions, &filter, lexical_sorting, reverse);
+            super::sort(&mut versions, &filter, lexical_sorting, reverse, stable);
         }
 
         #[test]

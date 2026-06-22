@@ -172,10 +172,16 @@ fn sort_test_generic(
     reverse: bool,
     flatten: bool,
     fail_if_potentially_ambiguous: bool,
+    stable: bool,
     filter: Option<VersionReq>,
     versions: Vec<Version>,
 ) {
-    let mut args = vec![COMMAND_SORT.to_string()];
+    let mut args = Vec::new();
+    if stable {
+        args.push("-o".to_string());
+        args.push("text".to_string());
+    }
+    args.push(COMMAND_SORT.to_string());
     if lexical_sorting {
         args.push("--lexical-sorting".to_string());
     }
@@ -187,6 +193,12 @@ fn sort_test_generic(
     }
     if fail_if_potentially_ambiguous {
         args.push("--fail-if-potentially-ambiguous".to_string());
+    }
+    if stable {
+        args.push("--stable".to_string());
+    }
+    if stable && !flatten {
+        args.push("--flatten".to_string());
     }
 
     if let Some(filter) = filter {
@@ -208,7 +220,16 @@ fn sort_test_generic(
             .append_context(COMMAND_SORT, "prop test ambiguous")
             .failure();
     } else {
-        assert.append_context(COMMAND_SORT, "prop test").success();
+        if stable {
+            let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+            assert.append_context(COMMAND_SORT, "prop test").success();
+            for line in stdout.lines().filter(|l| !l.is_empty()) {
+                let parsed = Version::parse(line).expect("stable sort output parses");
+                assert!(parsed.pre.is_empty());
+            }
+        } else {
+            assert.append_context(COMMAND_SORT, "prop test").success();
+        }
     }
 }
 
@@ -224,8 +245,8 @@ proptest! {
     // Using some large number of filters is unlikely to provide us with half the
     // test cases,
     #[test]
-    fn sort_test_small(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_SMALL)) {
-        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, filter, versions);
+    fn sort_test_small(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, stable: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_SMALL)) {
+        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, stable, filter, versions);
     }
 
     // Since the filters are incredibly complex from the framework, the odds of
@@ -237,7 +258,7 @@ proptest! {
     // change the meaning of "large for windows" instead.
     #[cfg(not(windows))]
     #[test]
-    fn sort_test_large(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_LARGE)) {
-        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, filter, versions);
+    fn sort_test_large(lexical_sorting: bool, reverse: bool, flatten: bool, fail_if_potentially_ambiguous: bool, stable: bool, filter in arb_optional_version_req(0.5, 2), versions in arb_vec_versions(SORT_TEST_VERSION_COUNT_LARGE)) {
+        sort_test_generic(lexical_sorting, reverse, flatten, fail_if_potentially_ambiguous, stable, filter, versions);
     }
 }
