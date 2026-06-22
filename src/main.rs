@@ -20,39 +20,16 @@
 //!                     more important than rust-doc here.
 #![allow(rustdoc::bare_urls)]
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
+use sem_tool::misc::{ApplicationError, ExitOutcome, OutputFormat, SubcommandResult, emit};
+use sem_tool::results::{
+    BoundaryKind, BoundaryVersionResult, ComparisonStatement, FilterTestResult, FlatVersionsList,
+    GenerateResult, OrderedVersionMap, SelectResult, SemverComponent, SerializableOrdering,
+    ValidateResult, VersionExplanation, VersionMutationResult,
+};
 use semver::{Version, VersionReq};
 use std::error::Error;
 use std::io;
-
-mod misc;
-mod regex;
-mod results;
-
-use misc::*;
-use results::*;
-
-/// Component of a semantic version for the select subcommand.
-#[derive(ValueEnum, Clone, Copy, Debug)]
-pub enum SemverComponent {
-    Major,
-    Minor,
-    Patch,
-    PreRelease,
-    BuildMetadata,
-}
-
-impl From<SemverComponent> for SelectComponent {
-    fn from(c: SemverComponent) -> Self {
-        match c {
-            SemverComponent::Major => SelectComponent::Major,
-            SemverComponent::Minor => SelectComponent::Minor,
-            SemverComponent::Patch => SelectComponent::Patch,
-            SemverComponent::PreRelease => SelectComponent::PreRelease,
-            SemverComponent::BuildMetadata => SelectComponent::BuildMetadata,
-        }
-    }
-}
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -60,7 +37,7 @@ pub struct Args {
     #[command(subcommand)]
     cmd: Commands,
 
-    #[clap(long, short = 'o', value_enum, default_value_t=OutputFormat::Yaml)]
+    #[clap(long, short = 'o', value_enum, default_value_t = OutputFormat::Yaml)]
     out: OutputFormat,
 }
 
@@ -158,7 +135,7 @@ enum Commands {
         #[clap(long, short = 'f', default_value = None)]
         /// Only emit versions that match a filter.
         ///
-        /// These filter rules are described by the semver crate `VersionReq``
+        /// These filter rules are described by the semver crate `VersionReq`
         /// documentation, and more generally in the cargo book.
         ///
         /// In particular, note the warnings around pre-releases in the
@@ -237,7 +214,7 @@ enum Commands {
     FilterTest {
         /// Filter to test against a specific Semantic Version.
         ///
-        /// These filter rules are described by the semver crate `VersionReq``
+        /// These filter rules are described by the semver crate `VersionReq`
         /// documentation, and more generally in the cargo book.
         ///
         /// In particular, note the warnings around pre-releases in the
@@ -385,7 +362,9 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
     let mut ignore_exit_status_from_output = false;
 
     let result: SubcommandResult = match args.cmd {
-        Commands::Explain { semantic_version } => explain(&semantic_version).into(),
+        Commands::Explain { semantic_version } => {
+            VersionExplanation::from(&semantic_version).into()
+        }
         Commands::Compare {
             set_exit_status,
             semantic_exit_status,
@@ -397,7 +376,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             if !set_exit_status {
                 ignore_exit_status_from_output = true;
             }
-            let res = compare(&a, &b);
+            let res = ComparisonStatement::new(&a, &b);
 
             if semantic_exit_status && res.semantic_ordering() == &SerializableOrdering::Equal {
                 ignore_exit_status_from_output = true
@@ -416,7 +395,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
         } => {
             let mut parsed_versions = parse_versions(versions)?;
 
-            let mut ordered_version_list = sort(
+            let mut ordered_version_list = OrderedVersionMap::new(
                 &mut parsed_versions,
                 &filter,
                 lexical_sorting,
@@ -425,7 +404,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             );
 
             if fail_if_potentially_ambiguous && ordered_version_list.potentially_ambiguous() {
-                return Err(Box::new(misc::ApplicationError::FailedRequirementError {
+                return Err(Box::new(ApplicationError::FailedRequirementError {
                     err: "Potential Ambiguity Detected".to_string(),
                 }));
             }
@@ -439,9 +418,12 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
         Commands::FilterTest {
             filter,
             semantic_version,
-        } => filter_test(&filter, &semantic_version).into(),
-        Commands::Validate { version, small } => validate(version, small).into(),
-        Commands::Generate { small, count } => generate(small, count).into(),
+        } => FilterTestResult::filter_test(&filter, &semantic_version).into(),
+        Commands::Validate { version, small } => {
+            // NOTE(canardleteer): This is somewhat of a useless code path.
+            ValidateResult::validate(version, small).into()
+        }
+        Commands::Generate { small, count } => GenerateResult::new(small, count).into(),
         Commands::Set {
             semantic_version,
             set_major,
@@ -449,7 +431,7 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             set_patch,
             set_pre_release,
             set_build_metadata,
-        } => set(
+        } => VersionMutationResult::set(
             &semantic_version,
             set_major,
             set_minor,
@@ -463,14 +445,15 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             bump_major,
             bump_minor,
             bump_patch,
-        } => bump(&semantic_version, bump_major, bump_minor, bump_patch)?.into(),
+        } => VersionMutationResult::bump(&semantic_version, bump_major, bump_minor, bump_patch)?
+            .into(),
         Commands::BumpReset {
             semantic_version,
             major,
             clear_pre_release,
             clear_build_metadata,
             normal_version_only,
-        } => bump_reset(
+        } => VersionMutationResult::bump_reset(
             &semantic_version,
             major,
             clear_pre_release,
@@ -486,23 +469,10 @@ fn main() -> Result<ExitOutcome, Box<dyn Error>> {
             version,
             small,
             fail_if_not_found,
-        } => select(version.as_str(), component, small, fail_if_not_found)?.into(),
+        } => SelectResult::select(version.as_str(), component, small, fail_if_not_found)?.into(),
     };
 
-    match args.out {
-        OutputFormat::Text => print!("{result}"),
-        OutputFormat::Yaml => {
-            println!("---");
-            let yaml = serde_yaml::to_string(&result)
-                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-            print!("{yaml}");
-        }
-        OutputFormat::Json => {
-            let json = serde_json::to_string(&result)
-                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-            println!("{json}");
-        }
-    }
+    emit(&result, args.out)?;
 
     Ok(ExitOutcome::new(result, ignore_exit_status_from_output))
 }
@@ -538,16 +508,6 @@ fn parse_versions(versions: Option<Vec<Version>>) -> Result<Vec<Version>, Box<dy
     }
 }
 
-fn sort(
-    versions: &mut Vec<Version>,
-    filter: &Option<VersionReq>,
-    lexical_sorting: bool,
-    reverse: bool,
-    stable: bool,
-) -> OrderedVersionMap {
-    OrderedVersionMap::new(versions, filter, lexical_sorting, reverse, stable)
-}
-
 fn boundary_versions(
     kind: BoundaryKind,
     args: BoundaryListArgs,
@@ -562,7 +522,7 @@ fn boundary_versions(
     } = args;
 
     let mut parsed_versions = parse_versions(versions)?;
-    let map = sort(
+    let map = OrderedVersionMap::new(
         &mut parsed_versions,
         &filter,
         lexical_sorting,
@@ -574,80 +534,16 @@ fn boundary_versions(
         .map_err(|e| e.into())
 }
 
-/// Returns the semantic and lexical equivalence of 2 versions.
-fn compare(a: &Version, b: &Version) -> ComparisonStatement {
-    ComparisonStatement::new(a, b)
-}
-
-fn explain(v: &Version) -> VersionExplanation {
-    VersionExplanation::from(v)
-}
-
-fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
-    FilterTestResult::filter_test(filter, semantic_version)
-}
-
-fn validate(semantic_version: String, small: bool) -> ValidateResult {
-    // NOTE(canardleteer): This is somewhat of a useless code path.
-    ValidateResult::validate(semantic_version, small)
-}
-
-fn generate(small: bool, count: usize) -> GenerateResult {
-    GenerateResult::new(small, count)
-}
-
-fn set(
-    version: &Version,
-    major: Option<u64>,
-    minor: Option<u64>,
-    patch: Option<u64>,
-    pre_release: Option<String>,
-    build_metadata: Option<String>,
-) -> Result<VersionMutationResult, Box<dyn Error>> {
-    VersionMutationResult::set(version, major, minor, patch, pre_release, build_metadata)
-}
-
-fn bump(
-    version: &Version,
-    major: Option<u64>,
-    minor: Option<u64>,
-    patch: Option<u64>,
-) -> Result<VersionMutationResult, Box<dyn Error>> {
-    VersionMutationResult::bump(version, major, minor, patch)
-}
-
-fn bump_reset(
-    version: &Version,
-    major: bool,
-    clear_pre_release: bool,
-    clear_build_metadata: bool,
-    normal_version_only: bool,
-) -> Result<VersionMutationResult, Box<dyn Error>> {
-    VersionMutationResult::bump_reset(
-        version,
-        major,
-        clear_pre_release,
-        clear_build_metadata,
-        normal_version_only,
-    )
-}
-
-fn select(
-    version: &str,
-    component: SemverComponent,
-    small: bool,
-    fail_if_not_found: bool,
-) -> Result<SelectResult, Box<dyn Error>> {
-    SelectResult::select(version, component.into(), small, fail_if_not_found)
-}
-
 #[cfg(test)]
 mod tests {
     use proptest::prelude::*;
     use proptest_semver::*;
+    use sem_tool::results::{
+        ComparisonStatement, FilterTestResult, GenerateResult, OrderedVersionMap, SelectResult,
+        SemverComponent, SerializableOrdering, ValidateResult, VersionExplanation,
+        VersionMutationResult, version_without_build_metadata,
+    };
     use semver::Version;
-
-    use crate::{SemverComponent, SerializableOrdering, version_without_build_metadata};
 
     proptest! {
         //                 None of these tests do much more than ensure the
@@ -655,7 +551,7 @@ mod tests {
         //                 input.
         #[test]
         fn compare(a in arb_version(), b in arb_version()) {
-            let comparison = super::compare(&a, &b);
+            let comparison = ComparisonStatement::new(&a, &b);
 
             let a_no_build = version_without_build_metadata(&a);
             let b_no_build = version_without_build_metadata(&b);
@@ -679,30 +575,30 @@ mod tests {
 
         #[test]
         fn explain(version in arb_version()) {
-            super::explain(&version);
+            let _ = VersionExplanation::from(&version);
         }
 
         #[test]
         fn validate(version in arb_semver(), small: bool) {
-            super::validate(version, small);
+            ValidateResult::validate(version, small);
         }
 
         #[test]
         fn filter_test(filter in arb_version_req(MAX_COMPARATORS_IN_VERSION_REQ_STRING), version in arb_version()) {
-            super::filter_test(&filter, &version);
+            FilterTestResult::filter_test(&filter, &version);
         }
 
         #[test]
         fn sort(versions in arb_vec_versions(256), filter in arb_optional_version_req(0.5, MAX_COMPARATORS_IN_VERSION_REQ_STRING), lexical_sorting in any::<bool>(), reverse in any::<bool>(), stable in any::<bool>()) {
             let mut versions = versions.clone();
-            super::sort(&mut versions, &filter, lexical_sorting, reverse, stable);
+            OrderedVersionMap::new(&mut versions, &filter, lexical_sorting, reverse, stable);
         }
 
         #[test]
         fn generate(small: bool, count: u8) {
             // Not going to flex maxing out memory allocations here, limiting
             // to u8 testing.
-            super::generate(small, count.into());
+            GenerateResult::new(small, count.into());
         }
 
         #[test]
@@ -713,7 +609,7 @@ mod tests {
             Just(SemverComponent::PreRelease),
             Just(SemverComponent::BuildMetadata),
         ]) {
-            let result = super::select(&version.to_string(), component, true, false).unwrap();
+            let result = SelectResult::select(&version.to_string(), component, true, false).unwrap();
             // Just ensure we don't panic; optional components may be None
             let _ = format!("{result}");
         }
@@ -722,16 +618,16 @@ mod tests {
         fn bump_overflow(major in 1u64..=u64::MAX, minor in any::<u64>(), patch in any::<u64>()) {
             let v = Version::parse(&format!("{major}.{minor}.{patch}")).unwrap();
             if major == u64::MAX {
-                prop_assert!(super::bump(&v, Some(1), None, None).is_err());
+                prop_assert!(VersionMutationResult::bump(&v, Some(1), None, None).is_err());
             } else {
-                prop_assert!(super::bump(&v, Some(1), None, None).is_ok());
+                prop_assert!(VersionMutationResult::bump(&v, Some(1), None, None).is_ok());
             }
         }
 
         #[test]
         fn bump_reset_overflow(v in arb_version(), major_reset: bool) {
             let overflow = if major_reset { v.major == u64::MAX } else { v.minor == u64::MAX };
-            let result = super::bump_reset(&v, major_reset, false, false, false);
+            let result = VersionMutationResult::bump_reset(&v, major_reset, false, false, false);
             if overflow {
                 prop_assert!(result.is_err());
             } else {
@@ -752,7 +648,7 @@ mod tests {
             pre in prop::option::of(arb_pre_release_string()),
             build in prop::option::of(arb_build_metadata_string()),
         ) {
-            prop_assert!(super::set(&v, None, None, None, pre, build).is_ok());
+            prop_assert!(VersionMutationResult::set(&v, None, None, None, pre, build).is_ok());
         }
     }
 

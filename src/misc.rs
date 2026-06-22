@@ -20,10 +20,13 @@ use serde::Serialize;
 use std::process::{ExitCode, Termination};
 use thiserror::Error;
 
-use crate::results;
+use crate::results::{
+    BoundaryVersionResult, ComparisonStatement, FilterTestResult, FlatVersionsList, GenerateResult,
+    OrderedVersionMap, SelectResult, ValidateResult, VersionExplanation, VersionMutationResult,
+};
 
 #[derive(Error, Debug)]
-pub(crate) enum ApplicationError {
+pub enum ApplicationError {
     /// We got invalid input.
     #[error("Invalid input (expected {expected:?}, got {found:?}")]
     InvalidArgument { expected: String, found: String },
@@ -38,27 +41,20 @@ pub(crate) enum ApplicationError {
 }
 
 #[derive(ValueEnum, Clone, Debug)]
-pub(crate) enum OutputFormat {
+pub enum OutputFormat {
     Text,
     Yaml,
     Json,
 }
 
-/// Trait for subcommand output: types that can be written to stdout and report an exit code.
-/// Each subcommand selects one of these types; the concrete type is preserved in [SubcommandResult].
-#[allow(dead_code)] // bound for subcommand result types; used for documentation and future accessors
-pub(crate) trait SubcommandOutput: fmt::Display + Serialize + Termination {}
-
-impl<T: fmt::Display + Serialize + Termination> SubcommandOutput for T {}
-
 /// Exit policy wrapper: normal (use the result's exit code) vs always success.
-pub(crate) enum ExitOutcome {
+pub enum ExitOutcome {
     Normal(SubcommandResult),
     AlwaysSuccessful(SubcommandResult),
 }
 
 impl ExitOutcome {
-    pub(crate) const fn new(output: SubcommandResult, hard_success: bool) -> Self {
+    pub const fn new(output: SubcommandResult, hard_success: bool) -> Self {
         if hard_success {
             Self::AlwaysSuccessful(output)
         } else {
@@ -76,138 +72,80 @@ impl Termination for ExitOutcome {
     }
 }
 
-#[derive(Serialize)]
-#[serde(untagged)]
-pub(crate) enum SubcommandResult {
-    /// Assertion by this program
-    ComparisonStatement(results::ComparisonStatement),
-    /// Ordered Map representation of versions
-    OrderedVersionMap(results::OrderedVersionMap),
-    /// Breakdown of version
-    VersionExplanation(results::VersionExplanation),
-    /// Flat list of versions
-    FlatVersionsList(results::FlatVersionsList),
-    /// Flat list of strings
-    FlatStringList(results::FlatStringList),
-    /// Results from a filter test
-    FilterTestResult(results::FilterTestResult),
-    /// Results from a test
-    ValidateResult(results::ValidateResult),
-    /// Just a plain version
-    JustAVersion(results::VersionMutationResult),
-    /// Single component selection result
-    SelectResult(results::SelectResult),
-    /// Boundary min/max/latest selection
-    BoundaryVersionResult(results::BoundaryVersionResult),
+macro_rules! subcommand_result {
+    (
+        enum $name:ident {
+            $($variant:ident($ty:ty)),* $(,)?
+        }
+    ) => {
+        #[derive(Serialize)]
+        #[serde(untagged)]
+        pub enum $name {
+            $($variant($ty),)*
+        }
+
+        $(impl From<$ty> for $name {
+            fn from(value: $ty) -> Self {
+                Self::$variant(value)
+            }
+        })*
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                match self {
+                    $(Self::$variant(inner) => write!(f, "{inner}"),)*
+                }
+            }
+        }
+    };
 }
 
-impl From<results::ComparisonStatement> for SubcommandResult {
-    fn from(value: results::ComparisonStatement) -> Self {
-        Self::ComparisonStatement(value)
-    }
-}
-
-impl From<results::OrderedVersionMap> for SubcommandResult {
-    fn from(value: results::OrderedVersionMap) -> Self {
-        Self::OrderedVersionMap(value)
-    }
-}
-impl From<results::VersionExplanation> for SubcommandResult {
-    fn from(value: results::VersionExplanation) -> Self {
-        Self::VersionExplanation(value)
-    }
-}
-
-impl From<results::FlatVersionsList> for SubcommandResult {
-    fn from(value: results::FlatVersionsList) -> Self {
-        Self::FlatVersionsList(value)
-    }
-}
-
-impl From<results::FilterTestResult> for SubcommandResult {
-    fn from(value: results::FilterTestResult) -> Self {
-        Self::FilterTestResult(value)
-    }
-}
-
-impl From<results::ValidateResult> for SubcommandResult {
-    fn from(value: results::ValidateResult) -> Self {
-        Self::ValidateResult(value)
-    }
-}
-
-impl From<results::GenerateResult> for SubcommandResult {
-    fn from(value: results::GenerateResult) -> Self {
-        Self::FlatStringList(value.into())
-    }
-}
-
-impl From<results::VersionMutationResult> for SubcommandResult {
-    fn from(value: results::VersionMutationResult) -> Self {
-        Self::JustAVersion(value)
-    }
-}
-
-impl From<results::SelectResult> for SubcommandResult {
-    fn from(value: results::SelectResult) -> Self {
-        Self::SelectResult(value)
-    }
-}
-
-impl From<results::BoundaryVersionResult> for SubcommandResult {
-    fn from(value: results::BoundaryVersionResult) -> Self {
-        Self::BoundaryVersionResult(value)
+subcommand_result! {
+    enum SubcommandResult {
+        ComparisonStatement(ComparisonStatement),
+        OrderedVersionMap(OrderedVersionMap),
+        VersionExplanation(VersionExplanation),
+        FlatVersionsList(FlatVersionsList),
+        GenerateResult(GenerateResult),
+        FilterTestResult(FilterTestResult),
+        ValidateResult(ValidateResult),
+        VersionMutation(VersionMutationResult),
+        SelectResult(SelectResult),
+        BoundaryVersionResult(BoundaryVersionResult),
     }
 }
 
 impl Termination for SubcommandResult {
-    // NOTE(canardleteer): only expected to be called along certain code paths
-    //                     (at least for now).
     fn report(self) -> ExitCode {
         match self {
-            Self::ComparisonStatement(comparison_statement) => comparison_statement.report(),
-            Self::FilterTestResult(filter_test_result) => filter_test_result.report(),
-            Self::ValidateResult(validate_result) => validate_result.report(),
-            Self::SelectResult(select_result) => select_result.report(),
-            _ => ExitCode::SUCCESS,
+            Self::ComparisonStatement(s) => s.report(),
+            Self::FilterTestResult(s) => s.report(),
+            Self::ValidateResult(s) => s.report(),
+            Self::SelectResult(s) => s.report(),
+            Self::OrderedVersionMap(_)
+            | Self::VersionExplanation(_)
+            | Self::FlatVersionsList(_)
+            | Self::GenerateResult(_)
+            | Self::VersionMutation(_)
+            | Self::BoundaryVersionResult(_) => ExitCode::SUCCESS,
         }
     }
 }
 
-/// Display for subcommand result (delegates to inner type).
-impl fmt::Display for SubcommandResult {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::ComparisonStatement(v) => {
-                write!(f, "{}", v)
-            }
-            Self::OrderedVersionMap(v) => {
-                write!(f, "{}", v)
-            }
-            Self::VersionExplanation(v) => {
-                write!(f, "{}", v)
-            }
-            Self::FlatVersionsList(v) => {
-                write!(f, "{}", v)
-            }
-            Self::FlatStringList(v) => {
-                write!(f, "{}", v)
-            }
-            Self::FilterTestResult(v) => {
-                write!(f, "{}", v)
-            }
-            Self::ValidateResult(v) => {
-                write!(f, "{}", v)
-            }
-            Self::JustAVersion(v) => {
-                write!(f, "{}", v)
-            }
-            Self::SelectResult(v) => {
-                write!(f, "{}", v)
-            }
-            Self::BoundaryVersionResult(v) => {
-                write!(f, "{}", v)
-            }
+pub fn emit(result: &SubcommandResult, format: OutputFormat) -> Result<(), ApplicationError> {
+    match format {
+        OutputFormat::Text => print!("{result}"),
+        OutputFormat::Yaml => {
+            println!("---");
+            let yaml = serde_yaml::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
+            print!("{yaml}");
+        }
+        OutputFormat::Json => {
+            let json = serde_json::to_string(result)
+                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
+            println!("{json}");
         }
     }
+    Ok(())
 }

@@ -34,10 +34,10 @@ pub const ALWAYS_BUILD_METADATA_REGEX: &str = r"(?-u:(?:([0-9a-zA-Z-]+(?:\.[0-9a
 /// purposes of this tool.
 ///
 /// See [rand_regex::Regex] for more information.
-pub(crate) const DEFAULT_MAX_REPEAT: u32 = 100;
+pub const DEFAULT_MAX_REPEAT: u32 = 100;
 
 /// Generate [Vec<String>] filled with valid Semantic Versions.
-pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
+pub fn generate_any_valid_semver(count: usize) -> Vec<String> {
     let mut rng = rand::rng();
     let semver =
         rand_regex::Regex::compile(&SEMVER_REGEX[1..SEMVER_REGEX.len() - 1], DEFAULT_MAX_REPEAT)
@@ -53,7 +53,7 @@ pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
 /// promises for MAJOR, MINOR and PATCH.
 ///
 /// This could probably be done better.
-pub(crate) fn generate_u64_safe_semver(count: usize) -> Vec<String> {
+pub fn generate_u64_safe_semver(count: usize) -> Vec<String> {
     type RandomStringRegexIter =
         rand::distr::Iter<rand_regex::Regex, rand::rngs::ThreadRng, Result<String, FromUtf8Error>>;
 
