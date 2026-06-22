@@ -182,6 +182,56 @@ $ sem-tool set 0.0.1 --set-patch 20
 mutated_version: 0.0.20
 ```
 
+### `bump-reset`
+
+Reset-on-bump: increment one numeric segment and zero less significant ones.
+Additive arithmetic without resetting lower segments stays on **`bump`**. To
+replace or clear a segment without bumping, use **`set`** (for example,
+`set 1.0.0-rc.1 --set-pre-release=""` to drop prerelease only).
+
+| Invocation | Example in → out |
+|------------|------------------|
+| `bump-reset <ver>` *(default)* | `1.2.3-rc.1+ci` → `1.3.0-rc.1+ci` |
+| `bump-reset <ver> --major` | `1.2.3-rc.1+ci` → `2.0.0-rc.1+ci` |
+| + `--clear-pre-release` / `--clear-build-metadata` / `--normal-version-only` | Strip segments after the bump |
+
+```shell
+$ sem-tool -o text bump-reset 1.2.3
+1.3.0
+
+$ sem-tool -o text bump-reset 1.2.3-rc.1+ci --normal-version-only
+1.3.0
+```
+
+### `min`, `max`, and `latest`
+
+Return a single boundary answer from a version list (stdin or arguments), using
+the same ordering path as **`sort`**. For a full grouped list use **`sort`** (and
+`sort --flatten` for scripting). For global ambiguity across any tie group use
+**`sort --fail-if-potentially-ambiguous`**.
+
+**`latest`** is an alias for **`max`**.
+
+When the boundary group has multiple build-metadata variants at the same
+precedence (SemVer §10), the command **fails by default**. Use
+**`--allow-ambiguous`** to emit all ties, or **`--lexical-sorting`** for a
+documented non-spec lexical tiebreak (`lexical_tiebreak_used` in YAML/JSON).
+
+**`--stable`** excludes versions with non-empty pre-release before aggregation
+(documented filter opinion, same as peer `latest --stable`). Also available on
+**`sort`**.
+
+```shell
+$ sem-tool -o text max 1.0.0 2.0.0 1.5.0
+2.0.0
+
+$ sem-tool -o text max --stable 1.0.0-alpha 1.0.0 2.0.0
+2.0.0
+
+$ sem-tool max 0.1.2+bm0 0.1.2+bm1
+Error: ambiguous boundary (same precedence, differing build metadata)
+```
+
 ### `select`
 
 Get a single component (major, minor, patch, pre-release, build-metadata) from a
@@ -406,6 +456,14 @@ $ cat example-data/short-good-versions.txt | sem-tool  -o text sort --flatten -r
 0.2.0
 0.0.2
 0.0.1
+
+# exclude prerelease versions before ordering (opt-in filter opinion)
+$ sem-tool sort --stable --flatten 1.0.0-alpha 1.0.0 2.0.0
+---
+versions:
+- 1.0.0
+- 2.0.0
+potentially_ambiguous: false
 ```
 
 ### `generate`
