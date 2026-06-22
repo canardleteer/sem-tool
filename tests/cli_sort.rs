@@ -167,6 +167,25 @@ fn input_potentially_ambiguous(versions: &[Version]) -> bool {
     counts.values().any(|&c| c > 1)
 }
 
+fn apply_stable_filter(versions: &[Version], stable: bool) -> Vec<Version> {
+    if stable {
+        versions
+            .iter()
+            .filter(|v| v.pre.is_empty())
+            .cloned()
+            .collect()
+    } else {
+        versions.to_vec()
+    }
+}
+
+fn apply_sort_filter(versions: &[Version], filter: &Option<VersionReq>) -> Vec<Version> {
+    match filter {
+        Some(f) => versions.iter().filter(|v| f.matches(v)).cloned().collect(),
+        None => versions.to_vec(),
+    }
+}
+
 fn sort_test_generic(
     lexical_sorting: bool,
     reverse: bool,
@@ -201,7 +220,7 @@ fn sort_test_generic(
         args.push("--flatten".to_string());
     }
 
-    if let Some(filter) = filter {
+    if let Some(ref filter) = filter {
         args.push("--filter".to_string());
         args.push(format!("{}", filter));
     }
@@ -214,22 +233,25 @@ fn sort_test_generic(
     );
 
     let assert = common_cmd().args(&args).assert();
-    let ambiguous = input_potentially_ambiguous(&versions);
+    let filtered = apply_sort_filter(&apply_stable_filter(&versions, stable), &filter);
+    let ambiguous = input_potentially_ambiguous(&filtered);
     if fail_if_potentially_ambiguous && ambiguous {
         assert
             .append_context(COMMAND_SORT, "prop test ambiguous")
             .failure();
-    } else {
-        if stable {
-            let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
-            assert.append_context(COMMAND_SORT, "prop test").success();
-            for line in stdout.lines().filter(|l| !l.is_empty()) {
-                let parsed = Version::parse(line).expect("stable sort output parses");
-                assert!(parsed.pre.is_empty());
-            }
-        } else {
-            assert.append_context(COMMAND_SORT, "prop test").success();
+    } else if stable && filtered.is_empty() {
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+        assert.append_context(COMMAND_SORT, "prop test stable empty").success();
+        assert!(stdout.lines().all(|l| l.is_empty()));
+    } else if stable {
+        let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
+        assert.append_context(COMMAND_SORT, "prop test").success();
+        for line in stdout.lines().filter(|l| !l.is_empty()) {
+            let parsed = Version::parse(line).expect("stable sort output parses");
+            assert!(parsed.pre.is_empty());
         }
+    } else {
+        assert.append_context(COMMAND_SORT, "prop test").success();
     }
 }
 
