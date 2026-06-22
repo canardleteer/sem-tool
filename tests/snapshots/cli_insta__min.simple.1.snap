@@ -1,0 +1,18 @@
+---
+source: tests/cli_insta.rs
+info:
+  program: sem-tool
+  args:
+    - "-o"
+    - text
+    - min
+    - 1.0.0
+    - 2.0.0
+    - 1.5.0
+---
+success: true
+exit_code: 0
+----- stdout -----
+1.0.0
+
+----- stderr -----

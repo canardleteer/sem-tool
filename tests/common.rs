@@ -12,7 +12,10 @@ pub(crate) mod subcommands {
     pub(crate) const COMMAND_BUMP: &str = "bump";
     pub(crate) const COMMAND_BUMP_RESET: &str = "bump-reset";
     pub(crate) const COMMAND_SELECT: &str = "select";
-    pub(crate) const ALL_COMMANDS: [&str; 10] = [
+    pub(crate) const COMMAND_MIN: &str = "min";
+    pub(crate) const COMMAND_MAX: &str = "max";
+    pub(crate) const COMMAND_LATEST: &str = "latest";
+    pub(crate) const ALL_COMMANDS: [&str; 13] = [
         COMMAND_COMPARE,
         COMMAND_EXPLAIN,
         COMMAND_FILTER_TEST,
@@ -23,6 +26,9 @@ pub(crate) mod subcommands {
         COMMAND_BUMP_RESET,
         COMMAND_SET,
         COMMAND_SELECT,
+        COMMAND_MIN,
+        COMMAND_MAX,
+        COMMAND_LATEST,
     ];
 }
 

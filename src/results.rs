@@ -604,6 +604,93 @@ pub(crate) struct VersionMutationResult {
     pub(crate) mutated_version: Version,
 }
 
+/// Which end of the precedence-ordered version groups to select.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum BoundaryKind {
+    Min,
+    Max,
+}
+
+/// Result of selecting min/max/latest from a version list.
+#[derive(Serialize, PartialEq)]
+pub(crate) struct BoundaryVersionResult {
+    pub(crate) versions: Vec<Version>,
+    pub(crate) potentially_ambiguous: bool,
+    pub(crate) lexical_tiebreak_used: bool,
+    pub(crate) stable_filter_applied: bool,
+}
+
+impl BoundaryVersionResult {
+    pub(crate) fn boundary_versions(
+        map: &OrderedVersionMap,
+        kind: BoundaryKind,
+        allow_ambiguous: bool,
+        lexical_sorting: bool,
+        stable_filter_applied: bool,
+    ) -> Result<Self, super::misc::ApplicationError> {
+        if map.inner.is_empty() {
+            return Err(super::misc::ApplicationError::FailedRequirementError {
+                err: "no versions remaining after filters".to_string(),
+            });
+        }
+
+        let (_key, group) = match kind {
+            BoundaryKind::Max => map
+                .inner
+                .iter()
+                .max_by(|a, b| a.0.cmp(b.0))
+                .expect("non-empty map"),
+            BoundaryKind::Min => map
+                .inner
+                .iter()
+                .min_by(|a, b| a.0.cmp(b.0))
+                .expect("non-empty map"),
+        };
+
+        let potentially_ambiguous = group.len() > 1;
+
+        if potentially_ambiguous && !allow_ambiguous && !lexical_sorting {
+            return Err(super::misc::ApplicationError::FailedRequirementError {
+                err: "ambiguous boundary (same precedence, differing build metadata)".to_string(),
+            });
+        }
+
+        let versions = if potentially_ambiguous && allow_ambiguous {
+            group.clone()
+        } else if potentially_ambiguous && lexical_sorting {
+            let picked = match kind {
+                BoundaryKind::Max => group.last().expect("non-empty group"),
+                BoundaryKind::Min => group.first().expect("non-empty group"),
+            };
+            vec![picked.clone()]
+        } else {
+            vec![group[0].clone()]
+        };
+
+        Ok(Self {
+            versions,
+            potentially_ambiguous,
+            lexical_tiebreak_used: potentially_ambiguous && lexical_sorting && !allow_ambiguous,
+            stable_filter_applied,
+        })
+    }
+}
+
+impl fmt::Display for BoundaryVersionResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for v in &self.versions {
+            writeln!(f, "{v}")?;
+        }
+        Ok(())
+    }
+}
+
+impl Termination for BoundaryVersionResult {
+    fn report(self) -> ExitCode {
+        ExitCode::SUCCESS
+    }
+}
+
 impl VersionMutationResult {
     pub(crate) fn set(
         version: &Version,
@@ -1184,6 +1271,30 @@ mod tests {
 
         let normal = VersionMutationResult::bump_reset(&v, false, false, false, true).unwrap();
         assert_eq!(normal.mutated_version.to_string(), "1.3.0");
+    }
+
+    #[test]
+    fn test_boundary_versions() {
+        let mut versions: Vec<Version> = ["1.0.0", "2.0.0+bm", "2.0.0+bm2"]
+            .iter()
+            .map(|s| Version::parse(s).unwrap())
+            .collect();
+        let map = OrderedVersionMap::new(&mut versions, &None, false, false, false);
+
+        let max =
+            BoundaryVersionResult::boundary_versions(&map, BoundaryKind::Max, false, false, false);
+        assert!(max.is_err());
+
+        let max_lex =
+            BoundaryVersionResult::boundary_versions(&map, BoundaryKind::Max, false, true, false)
+                .unwrap();
+        assert_eq!(max_lex.versions.len(), 1);
+        assert!(max_lex.lexical_tiebreak_used);
+
+        let min =
+            BoundaryVersionResult::boundary_versions(&map, BoundaryKind::Min, false, false, false)
+                .unwrap();
+        assert_eq!(min.versions[0].to_string(), "1.0.0");
     }
 
     #[test]

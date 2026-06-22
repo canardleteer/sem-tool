@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 158e408a135e4bffb182a5d932da5c649b235fc52e01ea516ae3da13a27bdb2d # shrinks to stable = false, lexical_sorting = false, allow_ambiguous = false, filter = Some(VersionReq { comparators: [Comparator { op: Tilde, major: 0, minor: None, patch: None, pre: Prerelease("") }] }), versions = [Version { major: 1, minor: 0, patch: 0 }]
+cc db76698b945a4639daf16ce92be0c93a55a7b692b37316a096d1653af224df19 # shrinks to stable = false, lexical_sorting = false, allow_ambiguous = false, filter = None, versions = [Version { major: 0, minor: 0, patch: 0 }]
