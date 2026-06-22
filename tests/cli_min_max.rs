@@ -177,41 +177,15 @@ fn apply_filter(versions: &[Version], filter: &Option<VersionReq>) -> Vec<Versio
 
 const BOUNDARY_TEST_VERSION_COUNT_SMALL: usize = 16;
 
-fn boundary_test_generic(
+fn boundary_cmd_args(
     command: &'static str,
-    kind_max: bool,
     stable: bool,
     reverse: bool,
     lexical_sorting: bool,
     allow_ambiguous: bool,
-    filter: Option<VersionReq>,
-    versions: Vec<Version>,
-) {
-    let filtered = apply_filter(&apply_stable(&versions, stable), &filter);
-    if filtered.is_empty() {
-        let mut args = vec!["-o".to_string(), "text".to_string(), command.to_string()];
-        if stable {
-            args.push("--stable".to_string());
-        }
-        if reverse {
-            args.push("--reverse".to_string());
-        }
-        if let Some(filter) = &filter {
-            args.push("--filter".to_string());
-            args.push(filter.to_string());
-        }
-        args.extend(versions.iter().map(|v| v.to_string()));
-        common_cmd()
-            .args(&args)
-            .assert()
-            .append_context(command, "empty after filters")
-            .failure();
-        return;
-    }
-
-    let ambiguous = boundary_ambiguous(&filtered, kind_max);
-    let expected_key = boundary_precedence_key(&filtered, kind_max);
-
+    filter: &Option<VersionReq>,
+    versions: &[Version],
+) -> Vec<String> {
     let mut args = vec!["-o".to_string(), "text".to_string(), command.to_string()];
     if stable {
         args.push("--stable".to_string());
@@ -230,6 +204,50 @@ fn boundary_test_generic(
         args.push(filter.to_string());
     }
     args.extend(versions.iter().map(|v| v.to_string()));
+    args
+}
+
+fn boundary_test_generic(
+    command: &'static str,
+    kind_max: bool,
+    stable: bool,
+    reverse: bool,
+    lexical_sorting: bool,
+    allow_ambiguous: bool,
+    filter: Option<VersionReq>,
+    versions: Vec<Version>,
+) {
+    let filtered = apply_filter(&apply_stable(&versions, stable), &filter);
+    if filtered.is_empty() {
+        let args = boundary_cmd_args(
+            command,
+            stable,
+            reverse,
+            false,
+            false,
+            &filter,
+            &versions,
+        );
+        common_cmd()
+            .args(&args)
+            .assert()
+            .append_context(command, "empty after filters")
+            .failure();
+        return;
+    }
+
+    let ambiguous = boundary_ambiguous(&filtered, kind_max);
+    let expected_key = boundary_precedence_key(&filtered, kind_max);
+
+    let args = boundary_cmd_args(
+        command,
+        stable,
+        reverse,
+        lexical_sorting,
+        allow_ambiguous,
+        &filter,
+        &versions,
+    );
 
     let assert = common_cmd().args(&args).assert();
     if ambiguous && !allow_ambiguous && !lexical_sorting {
@@ -290,21 +308,35 @@ proptest! {
 
     #[test]
     fn prop_latest_alias(
-        versions in arb_vec_versions(8),
+        stable: bool,
+        reverse: bool,
+        lexical_sorting: bool,
+        allow_ambiguous: bool,
+        filter in arb_optional_version_req(0.5, 2),
+        versions in arb_vec_versions(BOUNDARY_TEST_VERSION_COUNT_SMALL),
     ) {
-        prop_assume!(!versions.is_empty());
-        let max = common_cmd()
-            .arg("-o")
-            .arg("text")
-            .arg(COMMAND_MAX)
-            .args(versions.iter().map(|v| v.to_string()))
-            .assert();
-        let latest = common_cmd()
-            .arg("-o")
-            .arg("text")
-            .arg(COMMAND_LATEST)
-            .args(versions.iter().map(|v| v.to_string()))
-            .assert();
+        let max_args = boundary_cmd_args(
+            COMMAND_MAX,
+            stable,
+            reverse,
+            lexical_sorting,
+            allow_ambiguous,
+            &filter,
+            &versions,
+        );
+        let latest_args = boundary_cmd_args(
+            COMMAND_LATEST,
+            stable,
+            reverse,
+            lexical_sorting,
+            allow_ambiguous,
+            &filter,
+            &versions,
+        );
+
+        let max = common_cmd().args(&max_args).assert();
+        let latest = common_cmd().args(&latest_args).assert();
+
         if max.get_output().status.success() {
             let max_stdout = String::from_utf8_lossy(&max.get_output().stdout).into_owned();
             let latest_stdout =
