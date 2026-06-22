@@ -26,7 +26,7 @@ use crate::results::{
 };
 
 #[derive(Error, Debug)]
-pub enum ApplicationError {
+pub(crate) enum ApplicationError {
     /// We got invalid input.
     #[error("Invalid input (expected {expected:?}, got {found:?}")]
     InvalidArgument { expected: String, found: String },
@@ -41,20 +41,20 @@ pub enum ApplicationError {
 }
 
 #[derive(ValueEnum, Clone, Debug)]
-pub enum OutputFormat {
+pub(crate) enum OutputFormat {
     Text,
     Yaml,
     Json,
 }
 
 /// Exit policy wrapper: normal (use the result's exit code) vs always success.
-pub enum ExitOutcome {
+pub(crate) enum ExitOutcome {
     Normal(SubcommandResult),
     AlwaysSuccessful(SubcommandResult),
 }
 
 impl ExitOutcome {
-    pub const fn new(output: SubcommandResult, hard_success: bool) -> Self {
+    pub(crate) const fn new(output: SubcommandResult, hard_success: bool) -> Self {
         if hard_success {
             Self::AlwaysSuccessful(output)
         } else {
@@ -80,7 +80,7 @@ macro_rules! subcommand_result {
     ) => {
         #[derive(Serialize)]
         #[serde(untagged)]
-        pub enum $name {
+        pub(crate) enum $name {
             $($variant($ty),)*
         }
 
@@ -132,7 +132,10 @@ impl Termination for SubcommandResult {
     }
 }
 
-pub fn emit(result: &SubcommandResult, format: OutputFormat) -> Result<(), ApplicationError> {
+pub(crate) fn emit(
+    result: &SubcommandResult,
+    format: OutputFormat,
+) -> Result<(), ApplicationError> {
     match format {
         OutputFormat::Text => print!("{result}"),
         OutputFormat::Yaml => {

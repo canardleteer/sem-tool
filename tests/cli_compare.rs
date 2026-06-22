@@ -14,7 +14,7 @@
 //! limitations under the License.
 use proptest::prelude::*;
 use proptest_semver::*;
-use sem_tool::results::{compare_exit_code, version_without_build_metadata};
+use sem_tool::test_support::{compare_exit_code, version_without_build_metadata};
 
 mod common;
 use common::subcommands::*;
