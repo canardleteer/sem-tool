@@ -241,7 +241,9 @@ fn sort_test_generic(
             .failure();
     } else if stable && filtered.is_empty() {
         let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
-        assert.append_context(COMMAND_SORT, "prop test stable empty").success();
+        assert
+            .append_context(COMMAND_SORT, "prop test stable empty")
+            .success();
         assert!(stdout.lines().all(|l| l.is_empty()));
     } else if stable {
         let stdout = String::from_utf8_lossy(&assert.get_output().stdout).into_owned();
