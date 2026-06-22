@@ -21,23 +21,24 @@ use semver::{BuildMetadata, Prerelease};
 /// Regex for Semantic Version 2.0.0, directly from the spec, with 2 changes:
 ///
 /// * ASCII Only Restriction
-pub const SEMVER_REGEX: &str = r"^(?-u:(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$";
+pub(crate) const SEMVER_REGEX: &str = r"^(?-u:(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?)$";
 
 /// Regex to build a Pre-Release string, always, without the `-`.
-pub const ALWAYS_PRERELEASE_REGEX: &str = r"(?-u:(?:((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)))";
+pub(crate) const ALWAYS_PRERELEASE_REGEX: &str = r"(?-u:(?:((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*)))";
 
 /// Regex to build a Build Metadata string, always, without the prefix `+`.
-pub const ALWAYS_BUILD_METADATA_REGEX: &str = r"(?-u:(?:([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)))";
+pub(crate) const ALWAYS_BUILD_METADATA_REGEX: &str =
+    r"(?-u:(?:([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*)))";
 
 /// Generally the "maximum limit on repetitions" allowed for the regex string
 /// generator, to prevent automata making overly useless decisions for the
 /// purposes of this tool.
 ///
 /// See [rand_regex::Regex] for more information.
-pub const DEFAULT_MAX_REPEAT: u32 = 100;
+pub(crate) const DEFAULT_MAX_REPEAT: u32 = 100;
 
 /// Generate [Vec<String>] filled with valid Semantic Versions.
-pub fn generate_any_valid_semver(count: usize) -> Vec<String> {
+pub(crate) fn generate_any_valid_semver(count: usize) -> Vec<String> {
     let mut rng = rand::rng();
     let semver =
         rand_regex::Regex::compile(&SEMVER_REGEX[1..SEMVER_REGEX.len() - 1], DEFAULT_MAX_REPEAT)
@@ -53,7 +54,7 @@ pub fn generate_any_valid_semver(count: usize) -> Vec<String> {
 /// promises for MAJOR, MINOR and PATCH.
 ///
 /// This could probably be done better.
-pub fn generate_u64_safe_semver(count: usize) -> Vec<String> {
+pub(crate) fn generate_u64_safe_semver(count: usize) -> Vec<String> {
     type RandomStringRegexIter =
         rand::distr::Iter<rand_regex::Regex, rand::rngs::ThreadRng, Result<String, FromUtf8Error>>;
 

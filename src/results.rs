@@ -49,7 +49,7 @@ fn writeln_items<T: fmt::Display>(items: &[T], f: &mut fmt::Formatter<'_>) -> fm
 
 /// Component of a semantic version (used by `select` and clap).
 #[derive(ValueEnum, Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SemverComponent {
+pub(crate) enum SemverComponent {
     Major,
     Minor,
     Patch,
@@ -59,16 +59,16 @@ pub enum SemverComponent {
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
-pub struct ValidateResult {
+pub(crate) struct ValidateResult {
     valid: bool,
 }
 
 impl ValidateResult {
-    pub fn validate(semantic_version: String, small: bool) -> Self {
+    pub(crate) fn validate(semantic_version: String, small: bool) -> Self {
         let pass = if small {
             Version::parse(&semantic_version).is_ok()
         } else {
-            // If this crate gains a pub lib surface and validate may be called repeatedly,
+            // If validate may be called repeatedly, consider LazyLock for regex compile.
             // compile SEMVER_REGEX once via LazyLock in regex.rs instead of per call.
             Regex::new(super::regex::SEMVER_REGEX)
                 .unwrap()
@@ -101,12 +101,12 @@ impl Termination for ValidateResult {
 
 /// The result of a simple filter test.
 #[derive(Serialize, PartialEq)]
-pub struct FilterTestResult {
+pub(crate) struct FilterTestResult {
     pass: bool,
 }
 
 impl FilterTestResult {
-    pub fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
+    pub(crate) fn filter_test(filter: &VersionReq, semantic_version: &Version) -> FilterTestResult {
         filter.matches(semantic_version).into()
     }
 }
@@ -138,7 +138,7 @@ impl fmt::Display for FilterTestResult {
 }
 
 #[derive(Serialize, PartialEq)]
-pub struct SelectResult {
+pub(crate) struct SelectResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<String>,
     #[serde(skip)]
@@ -160,7 +160,7 @@ impl std::error::Error for SelectParseError {}
 impl SelectResult {
     /// Run select: parse version (regex by default, or semver crate with small),
     /// extract the requested component, and build result.
-    pub fn select(
+    pub(crate) fn select(
         version: &str,
         component: SemverComponent,
         small: bool,
@@ -227,7 +227,7 @@ impl SelectResult {
 type SemverRegexCaptures = (String, String, String, Option<String>, Option<String>);
 
 fn parse_semver_components(s: &str) -> Option<SemverRegexCaptures> {
-    // If this crate gains a pub lib surface and select may be called repeatedly,
+    // If select may be called repeatedly, compile SEMVER_REGEX once via LazyLock in regex.rs
     // compile SEMVER_REGEX once via LazyLock in regex.rs instead of per call.
     let re = Regex::new(SEMVER_REGEX).ok()?;
     let cap = re.captures(s)?;
@@ -264,7 +264,7 @@ impl Termination for SelectResult {
     }
 }
 #[derive(Clone, Debug, Serialize, PartialEq)]
-pub enum SegmentType {
+pub(crate) enum SegmentType {
     Numeric,
     Ascii,
 }
@@ -282,7 +282,7 @@ impl fmt::Display for SegmentType {
 ///
 /// Kind describes how the value is meant to be interpreted for precedence.
 #[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct PreMetaSegment {
+pub(crate) struct PreMetaSegment {
     kind: SegmentType,
     value: String,
 }
@@ -309,7 +309,7 @@ impl From<&str> for PreMetaSegment {
 
 /// Descriptive information about a Version.
 #[derive(Clone, Serialize, PartialEq)]
-pub struct VersionExplanation {
+pub(crate) struct VersionExplanation {
     major: u64,
     minor: u64,
     patch: u64,
@@ -393,7 +393,7 @@ impl fmt::Display for VersionExplanation {
 
 /// A simple list of Versions.
 #[derive(Serialize, PartialEq)]
-pub struct FlatVersionsList {
+pub(crate) struct FlatVersionsList {
     versions: Vec<Version>,
     potentially_ambiguous: bool,
 }
@@ -418,14 +418,14 @@ impl fmt::Display for FlatVersionsList {
 
 /// A usefully ordered list of versions.
 #[derive(Serialize)]
-pub struct OrderedVersionMap {
+pub(crate) struct OrderedVersionMap {
     #[serde(rename(serialize = "versions"))]
     inner: IndexMap<Version, Vec<Version>>,
     potentially_ambiguous: bool,
 }
 
 impl OrderedVersionMap {
-    pub fn new(
+    pub(crate) fn new(
         versions: &mut Vec<Version>,
         filter: &Option<VersionReq>,
         lexical_sorting: bool,
@@ -490,7 +490,7 @@ impl OrderedVersionMap {
         }
     }
 
-    pub fn potentially_ambiguous(&self) -> bool {
+    pub(crate) fn potentially_ambiguous(&self) -> bool {
         self.potentially_ambiguous
     }
 }
@@ -512,13 +512,13 @@ impl fmt::Display for OrderedVersionMap {
 
 /// A statement about the comparison about 2 versions
 #[derive(Serialize, PartialEq)]
-pub struct ComparisonStatement {
+pub(crate) struct ComparisonStatement {
     semantic_ordering: SerializableOrdering,
     lexical_ordering: SerializableOrdering,
 }
 
 impl ComparisonStatement {
-    pub fn new(a: &Version, b: &Version) -> Self {
+    pub(crate) fn new(a: &Version, b: &Version) -> Self {
         let a_no_build = version_without_build_metadata(a);
         let b_no_build = version_without_build_metadata(b);
 
@@ -528,24 +528,24 @@ impl ComparisonStatement {
         }
     }
 
-    pub fn semantic_ordering(&self) -> &SerializableOrdering {
+    pub(crate) fn semantic_ordering(&self) -> &SerializableOrdering {
         &self.semantic_ordering
     }
 
     #[allow(dead_code)]
-    pub fn lexical_ordering(&self) -> &SerializableOrdering {
+    pub(crate) fn lexical_ordering(&self) -> &SerializableOrdering {
         &self.lexical_ordering
     }
 }
 
 #[derive(Serialize, PartialEq)]
-pub struct GenerateResult {
+pub(crate) struct GenerateResult {
     #[serde(rename(serialize = "versions"))]
     inner: Vec<String>,
 }
 
 impl GenerateResult {
-    pub fn new(small: bool, count: usize) -> Self {
+    pub(crate) fn new(small: bool, count: usize) -> Self {
         let inner = if small {
             generate_u64_safe_semver(count)
         } else {
@@ -554,7 +554,8 @@ impl GenerateResult {
         GenerateResult { inner }
     }
 
-    pub fn into_inner(self) -> Vec<String> {
+    #[cfg(test)]
+    pub(crate) fn into_inner(self) -> Vec<String> {
         self.inner
     }
 }
@@ -566,28 +567,28 @@ impl fmt::Display for GenerateResult {
 }
 
 #[derive(Serialize, PartialEq)]
-pub struct VersionMutationResult {
-    pub mutated_version: Version,
+pub(crate) struct VersionMutationResult {
+    pub(crate) mutated_version: Version,
 }
 
 /// Which end of the precedence-ordered version groups to select.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BoundaryKind {
+pub(crate) enum BoundaryKind {
     Min,
     Max,
 }
 
 /// Result of selecting min/max/latest from a version list.
 #[derive(Serialize, PartialEq)]
-pub struct BoundaryVersionResult {
-    pub versions: Vec<Version>,
-    pub potentially_ambiguous: bool,
-    pub lexical_tiebreak_used: bool,
-    pub stable_filter_applied: bool,
+pub(crate) struct BoundaryVersionResult {
+    pub(crate) versions: Vec<Version>,
+    pub(crate) potentially_ambiguous: bool,
+    pub(crate) lexical_tiebreak_used: bool,
+    pub(crate) stable_filter_applied: bool,
 }
 
 impl BoundaryVersionResult {
-    pub fn boundary_versions(
+    pub(crate) fn boundary_versions(
         map: &OrderedVersionMap,
         kind: BoundaryKind,
         allow_ambiguous: bool,
@@ -649,7 +650,7 @@ impl fmt::Display for BoundaryVersionResult {
 }
 
 impl VersionMutationResult {
-    pub fn set(
+    pub(crate) fn set(
         version: &Version,
         major: Option<u64>,
         minor: Option<u64>,
@@ -695,7 +696,7 @@ impl VersionMutationResult {
     // NOTE(canardleteer): We could actually do bumps on pre-release and
     //                     build-metadata, if we supported a selector and
     //                     confirmed the segment was numeric.
-    pub fn bump(
+    pub(crate) fn bump(
         version: &Version,
         major: Option<u64>,
         minor: Option<u64>,
@@ -747,7 +748,7 @@ impl VersionMutationResult {
         })
     }
 
-    pub fn bump_reset(
+    pub(crate) fn bump_reset(
         version: &Version,
         major_reset: bool,
         clear_pre_release: bool,
@@ -851,7 +852,7 @@ impl fmt::Display for ComparisonStatement {
 
 /// Just a small reimplementation of std::Ordering with Serialization.
 #[derive(Debug, Serialize, PartialEq)]
-pub enum SerializableOrdering {
+pub(crate) enum SerializableOrdering {
     Less,
     Greater,
     Equal,

@@ -13,6 +13,28 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 
-pub mod misc;
-pub mod regex;
-pub mod results;
+//! `sem-tool` is a CLI application. This crate root exists so integration tests
+//! can share a small amount of logic with the implementation; it is not a
+//! supported library API.
+
+mod cli;
+mod misc;
+mod regex;
+mod results;
+
+use std::error::Error;
+use std::process::{ExitCode, Termination};
+
+/// Entry point for the `sem-tool` binary.
+#[doc(hidden)]
+pub fn run() -> Result<ExitCode, Box<dyn Error>> {
+    cli::run().map(|outcome| outcome.report())
+}
+
+/// Hidden exports for integration tests only.
+#[doc(hidden)]
+pub mod test_support {
+    pub use crate::results::{
+        compare_exit_code, ordering_pair_to_exit_code, version_without_build_metadata,
+    };
+}
