@@ -14,5 +14,4 @@ exit_code: 110
 ---
 semantic_ordering: Equal
 lexical_ordering: Less
-
 ----- stderr -----

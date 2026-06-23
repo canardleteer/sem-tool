@@ -140,7 +140,7 @@ pub(crate) fn emit(
         OutputFormat::Text => print!("{result}"),
         OutputFormat::Yaml => {
             println!("---");
-            let yaml = serde_yaml::to_string(result)
+            let yaml = noyalib::to_string(result)
                 .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
             print!("{yaml}");
         }
@@ -151,4 +151,88 @@ pub(crate) fn emit(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod yaml_structure_tests {
+    use super::SubcommandResult;
+    use crate::results::{
+        OrderedVersionMap, SelectResult, SemverComponent, ValidateResult, VersionExplanation,
+        VersionMutationResult,
+    };
+    use semver::Version;
+
+    fn parse_yaml_value(result: &SubcommandResult) -> serde_json::Value {
+        let yaml = noyalib::to_string(result).unwrap();
+        noyalib::from_str(&yaml).unwrap()
+    }
+
+    #[test]
+    fn validate_result_yaml_structure() {
+        let result = SubcommandResult::ValidateResult(ValidateResult::validate(
+            "1.2.3".into(),
+            false,
+        ));
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("valid").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    #[test]
+    fn version_mutation_result_yaml_structure() {
+        let result = SubcommandResult::VersionMutation(VersionMutationResult {
+            mutated_version: Version::parse("2.1.1").unwrap(),
+        });
+        let doc = parse_yaml_value(&result);
+        assert_eq!(
+            doc.get("mutated_version").and_then(|v| v.as_str()),
+            Some("2.1.1")
+        );
+    }
+
+    #[test]
+    fn ordered_version_map_yaml_structure() {
+        let mut versions = vec![
+            Version::parse("1.0.0").unwrap(),
+            Version::parse("2.0.0").unwrap(),
+        ];
+        let map = OrderedVersionMap::new(&mut versions, &None, false, false, false);
+        let result = SubcommandResult::OrderedVersionMap(map);
+        let doc = parse_yaml_value(&result);
+        let versions = doc
+            .get("versions")
+            .and_then(|v| v.as_object())
+            .expect("versions map");
+        assert_eq!(versions.len(), 2);
+        assert!(versions.contains_key("1.0.0"));
+        assert!(versions.contains_key("2.0.0"));
+    }
+
+    #[test]
+    fn version_explanation_yaml_structure() {
+        let version = Version::parse("1.2.3-rc.0+build.1").unwrap();
+        let result =
+            SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("major").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(doc.get("minor").and_then(|v| v.as_u64()), Some(2));
+        assert_eq!(doc.get("patch").and_then(|v| v.as_u64()), Some(3));
+        assert_eq!(
+            doc.get("prerelease_string").and_then(|v| v.as_str()),
+            Some("rc.0")
+        );
+        assert!(doc.get("prerelease").and_then(|v| v.as_array()).is_some());
+        assert_eq!(
+            doc.get("build_metadata_string").and_then(|v| v.as_str()),
+            Some("build.1")
+        );
+        assert!(doc.get("build-metadata").and_then(|v| v.as_array()).is_some());
+    }
+
+    #[test]
+    fn select_result_untagged_yaml_structure() {
+        let inner = SelectResult::select("1.2.3", SemverComponent::Major, false, false).unwrap();
+        let result = SubcommandResult::SelectResult(inner);
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("value").and_then(|v| v.as_str()), Some("1"));
+    }
 }
