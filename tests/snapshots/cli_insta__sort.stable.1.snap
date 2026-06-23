@@ -15,8 +15,8 @@ exit_code: 0
 ----- stdout -----
 ---
 versions:
-- 1.0.0
-- 2.0.0
+  - "1.0.0"
+  - "2.0.0"
 potentially_ambiguous: false
 
 ----- stderr -----

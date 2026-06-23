@@ -55,17 +55,13 @@ serde_json = "1.0.150"
 
 # NOTE(canardleteer): YAML serialization trade-offs:
 #
-#   - `serde_yaml` (current): stable Serde integration; only used for
-#     `serde_yaml::to_string` in main. Upstream crate is deprecated/archived
-#     and has YAML 1.1 quirks.
+#   - `serde_yaml`: deprecated/archived; pulls in `unsafe-libyaml`; YAML 1.1 quirks.
 #
-#   - `serde_yml`: active fork with a drop-in API, but over-quotes strings in
-#     output, breaking interoperability with tools like `yq`.
+#   - `serde_yml`: archived shim over `noyalib`; prefer depending on `noyalib` directly.
 #
-#   - `saphyr-rs/saphyr` (target direction): YAML 1.2 compliant, passes the
-#     YAML test suite, correctness-first. Official `saphyr-serde` is planned;
-#     migrate when Serde integration lands from saphyr-rs rather than serde_yml.
-serde_yaml = "0.9.34"
+#   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
+#     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
+noyalib = "0.0.8"
 
 [dev-dependencies]
 assert_cmd = "2.2.2"

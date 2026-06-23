@@ -41,7 +41,7 @@ fn cli_select_basic_major() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "major")
-        .stdout("---\nvalue: '1'\n")
+        .stdout("---\nvalue: \"1\"\n")
         .success();
 }
 
@@ -54,7 +54,7 @@ fn cli_select_basic_minor() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "minor")
-        .stdout("---\nvalue: '2'\n")
+        .stdout("---\nvalue: \"2\"\n")
         .success();
 }
 
@@ -67,7 +67,7 @@ fn cli_select_basic_patch() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "patch")
-        .stdout("---\nvalue: '2'\n")
+        .stdout("---\nvalue: \"2\"\n")
         .success();
 }
 
@@ -133,7 +133,7 @@ fn cli_select_default_regex_large_version() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "regex large major")
-        .stdout("---\nvalue: '18446744073709551616'\n")
+        .stdout("---\nvalue: \"18446744073709551616\"\n")
         .success();
 }
 
@@ -147,7 +147,7 @@ fn cli_select_small_flag() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "small")
-        .stdout("---\nvalue: '1'\n")
+        .stdout("---\nvalue: \"1\"\n")
         .success();
 }
 
