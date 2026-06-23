@@ -12,5 +12,6 @@ success: true
 exit_code: 0
 ----- stdout -----
 ---
-value: "20"
+value: '20'
+
 ----- stderr -----

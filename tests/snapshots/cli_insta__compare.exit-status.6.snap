@@ -15,4 +15,5 @@ exit_code: 0
 ---
 semantic_ordering: Equal
 lexical_ordering: Less
+
 ----- stderr -----

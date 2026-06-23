@@ -15,4 +15,5 @@ exit_code: 0
 ---
 versions: {}
 potentially_ambiguous: false
+
 ----- stderr -----
