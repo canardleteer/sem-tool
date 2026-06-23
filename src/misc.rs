@@ -169,10 +169,8 @@ mod yaml_structure_tests {
 
     #[test]
     fn validate_result_yaml_structure() {
-        let result = SubcommandResult::ValidateResult(ValidateResult::validate(
-            "1.2.3".into(),
-            false,
-        ));
+        let result =
+            SubcommandResult::ValidateResult(ValidateResult::validate("1.2.3".into(), false));
         let doc = parse_yaml_value(&result);
         assert_eq!(doc.get("valid").and_then(|v| v.as_bool()), Some(true));
     }
@@ -210,8 +208,7 @@ mod yaml_structure_tests {
     #[test]
     fn version_explanation_yaml_structure() {
         let version = Version::parse("1.2.3-rc.0+build.1").unwrap();
-        let result =
-            SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
+        let result = SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
         let doc = parse_yaml_value(&result);
         assert_eq!(doc.get("major").and_then(|v| v.as_u64()), Some(1));
         assert_eq!(doc.get("minor").and_then(|v| v.as_u64()), Some(2));
@@ -225,7 +222,11 @@ mod yaml_structure_tests {
             doc.get("build_metadata_string").and_then(|v| v.as_str()),
             Some("build.1")
         );
-        assert!(doc.get("build-metadata").and_then(|v| v.as_array()).is_some());
+        assert!(
+            doc.get("build-metadata")
+                .and_then(|v| v.as_array())
+                .is_some()
+        );
     }
 
     #[test]
