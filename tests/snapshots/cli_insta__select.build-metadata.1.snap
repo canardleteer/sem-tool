@@ -12,4 +12,5 @@ exit_code: 0
 ----- stdout -----
 ---
 value: abc.1
+
 ----- stderr -----
