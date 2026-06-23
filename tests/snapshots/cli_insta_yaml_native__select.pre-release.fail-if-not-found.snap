@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - select
+    - pre-release
+    - 1.0.0
+    - "--fail-if-not-found"
+---
+success: false
+exit_code: 1
+----- stdout -----
+---
+{}
+----- stderr -----

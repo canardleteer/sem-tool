@@ -13,7 +13,13 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 //!
-//! Insta coverage for default CLI output (`serde-yaml-compatability` enabled).
+//! Insta coverage for native noyalib YAML output (`serde-yaml-compatability` disabled).
+//!
+//! Run with: `cargo test --no-default-features --test cli_insta_yaml_native`
+//!
+//! Temporary: remove this test crate when the compat feature is dropped in v0.2.0.
+#![cfg(not(feature = "serde-yaml-compatability"))]
+
 use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
 use std::process::Command;
 
@@ -24,7 +30,7 @@ fn cli() -> Command {
 }
 
 #[test]
-fn cli_insta() {
+fn cli_insta_yaml_native() {
     let targets = common::cli_insta_cases::insta_targets();
     for (key, args) in &targets {
         assert_cmd_snapshot!(*key, cli().args(args));

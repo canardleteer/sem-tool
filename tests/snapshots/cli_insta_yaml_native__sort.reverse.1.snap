@@ -1,0 +1,21 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - sort
+    - "-r"
+    - 0.1.2-rc0
+    - 0.1.2-rc1
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+versions:
+  "0.1.2-rc1":
+    - "0.1.2-rc1"
+  "0.1.2-rc0":
+    - "0.1.2-rc0"
+potentially_ambiguous: false
+----- stderr -----

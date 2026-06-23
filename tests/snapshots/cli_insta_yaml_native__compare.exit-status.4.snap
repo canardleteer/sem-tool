@@ -1,0 +1,17 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - compare
+    - "-e"
+    - 1.2.3+1
+    - 1.2.3+0
+---
+success: false
+exit_code: 112
+----- stdout -----
+---
+semantic_ordering: Equal
+lexical_ordering: Greater
+----- stderr -----
