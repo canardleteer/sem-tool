@@ -26,20 +26,7 @@ use indexmap::IndexMap;
 use rand::prelude::*;
 use regex::Regex;
 use semver::{BuildMetadata, Prerelease, Version, VersionReq};
-use serde::{Serialize, Serializer};
-
-fn serialize_u64_yaml<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    // noyalib rejects YAML integers above i64::MAX; large semver components are
-    // still valid u64 and are emitted as decimal strings instead.
-    if *value <= i64::MAX as u64 {
-        serializer.serialize_u64(*value)
-    } else {
-        serializer.serialize_str(&value.to_string())
-    }
-}
+use serde::Serialize;
 
 use super::regex::{SEMVER_REGEX, generate_any_valid_semver, generate_u64_safe_semver};
 
@@ -323,11 +310,8 @@ impl From<&str> for PreMetaSegment {
 /// Descriptive information about a Version.
 #[derive(Clone, Serialize, PartialEq)]
 pub(crate) struct VersionExplanation {
-    #[serde(serialize_with = "serialize_u64_yaml")]
     major: u64,
-    #[serde(serialize_with = "serialize_u64_yaml")]
     minor: u64,
-    #[serde(serialize_with = "serialize_u64_yaml")]
     patch: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
     prerelease_string: Option<String>,
