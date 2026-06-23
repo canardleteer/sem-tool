@@ -224,7 +224,8 @@ mod yaml_structure_tests {
 
     fn parse_yaml_value(result: &SubcommandResult) -> serde_json::Value {
         let yaml = serialize_yaml(result).unwrap();
-        noyalib::from_str(&yaml).unwrap()
+        let cfg = noyalib::ParserConfig::new().lossless_u64_integers(true);
+        noyalib::from_str_with_config(&yaml, &cfg).unwrap()
     }
 
     #[test]
