@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - explain
+    - a.b.c
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: invalid value 'a.b.c' for '<SEMANTIC_VERSION>': unexpected character 'a' while parsing major version number
+
+For more information, try '--help'.

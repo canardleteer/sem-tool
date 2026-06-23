@@ -1,0 +1,20 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - sort
+    - "--lexical-sorting"
+    - 0.1.2+bm0
+    - 0.1.2+bm1
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+versions:
+  "0.1.2":
+    - "0.1.2+bm0"
+    - "0.1.2+bm1"
+potentially_ambiguous: true
+----- stderr -----

@@ -1,0 +1,14 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - validate
+    - 0.0.0a
+---
+success: false
+exit_code: 1
+----- stdout -----
+---
+valid: false
+----- stderr -----
