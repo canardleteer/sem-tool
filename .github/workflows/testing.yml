@@ -40,6 +40,10 @@ jobs:
         working-directory: ./
         run: cargo test
 
+      - name: Run native YAML insta snapshots
+        working-directory: ./
+        run: cargo test --no-default-features --test cli_insta_yaml_native
+
       - name: Do a simple build
         working-directory: ./
         run: cargo build
