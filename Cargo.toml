@@ -28,6 +28,12 @@ categories = ["command-line-utilities"]
 readme = "README.md"
 description = "A simple Semantic Versioning CLI tool for parsing, filtering, sorting and explaining"
 
+[features]
+default = ["serde-yaml-compatability"]
+# Match legacy `serde_yaml` stdout cosmetics (quoting, list layout, trailing newline).
+# TODO(canardleteer): In v0.2.0, drop this from default features and remove the flag entirely.
+serde-yaml-compatability = []
+
 [package.metadata.wix]
 upgrade-guid = "4B0BC255-6C49-4242-8F92-789262A65064"
 path-guid = "D28BFC08-1707-4BF8-ACB8-9A4496178C5F"
@@ -61,6 +67,10 @@ serde_json = "1.0.150"
 #
 #   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
 #     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
+#
+#   Default feature `serde-yaml-compatability` preserves legacy `serde_yaml` stdout
+#   cosmetics (quoting, list layout, trailing newline). TODO(canardleteer): in v0.2.0,
+#   disable by default and remove the feature entirely.
 noyalib = "0.0.8"
 
 [dev-dependencies]

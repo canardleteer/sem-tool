@@ -11,5 +11,6 @@ success: true
 exit_code: 0
 ----- stdout -----
 ---
-value: "1"
+value: '1'
+
 ----- stderr -----
