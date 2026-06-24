@@ -291,6 +291,27 @@ mod yaml_structure_tests {
     }
 
     #[test]
+    fn version_explanation_yaml_preserves_u64_above_i64_max() {
+        const MAJOR: u64 = i64::MAX as u64 + 1;
+        let version = Version::parse(&format!("{MAJOR}.0.0")).unwrap();
+        let result = SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
+        let yaml = serialize_yaml(&result).unwrap();
+
+        assert!(
+            yaml.contains(&format!("major: {MAJOR}")),
+            "expected plain integer scalar in YAML output, got:\n{yaml}"
+        );
+        assert!(
+            !yaml.contains(&format!("major: \"{MAJOR}\""))
+                && !yaml.contains(&format!("major: '{MAJOR}'")),
+            "large semver components must not be emitted as YAML strings:\n{yaml}"
+        );
+
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("major").and_then(|v| v.as_u64()), Some(MAJOR));
+    }
+
+    #[test]
     fn select_result_untagged_yaml_structure() {
         let inner = SelectResult::select("1.2.3", SemverComponent::Major, false, false).unwrap();
         let result = SubcommandResult::SelectResult(inner);
