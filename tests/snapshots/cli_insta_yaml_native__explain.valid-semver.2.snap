@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - explain
+    - 0.1.2
+---
+success: true
+exit_code: 0
+----- stdout -----
+---
+major: 0
+minor: 1
+patch: 2
+----- stderr -----

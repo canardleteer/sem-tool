@@ -33,6 +33,9 @@ pub(crate) mod subcommands {
 }
 
 #[allow(dead_code)]
+pub mod cli_insta_cases;
+
+#[allow(dead_code)]
 pub(crate) fn common_cmd() -> Command {
     cargo_bin_cmd!(env!("CARGO_PKG_NAME"))
 }

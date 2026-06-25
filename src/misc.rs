@@ -16,6 +16,7 @@
 //! This is a bunch of last mile display + serialization logic.
 use clap::ValueEnum;
 use core::fmt;
+use noyalib::{SerializerConfig, to_string_with_config};
 use serde::Serialize;
 use std::process::{ExitCode, Termination};
 use thiserror::Error;
@@ -132,6 +133,64 @@ impl Termination for SubcommandResult {
     }
 }
 
+fn yaml_serializer_config() -> SerializerConfig {
+    #[cfg(feature = "old-yaml")]
+    {
+        SerializerConfig::new().compact_list_indent(true)
+    }
+    #[cfg(not(feature = "old-yaml"))]
+    {
+        SerializerConfig::new()
+    }
+}
+
+/// Re-quote noyalib `"…"` scalars to match legacy `serde_yaml` stdout cosmetics.
+///
+/// Necessary because noyalib 0.0.8 always double-quotes ambiguous scalars and does
+/// not yet honor `SerializerConfig::scalar_style`.
+#[cfg(feature = "old-yaml")]
+fn old_yaml_requote(yaml: &str) -> String {
+    use regex::{Captures, Regex};
+    use std::sync::LazyLock;
+
+    static DOUBLE_QUOTED_SCALAR: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#""([^"\\]*(?:\\.[^"\\]*)*)""#).unwrap());
+
+    DOUBLE_QUOTED_SCALAR
+        .replace_all(yaml, |caps: &Captures| {
+            let s = &caps[1];
+            if s.chars().all(|c| c.is_ascii_digit()) {
+                return format!("'{s}'");
+            }
+            if s.chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
+                && (s.contains('.') || s.contains('-') || s.contains('+'))
+            {
+                return s.to_string();
+            }
+            format!("'{s}'")
+        })
+        .into_owned()
+}
+
+fn serialize_yaml(result: &SubcommandResult) -> Result<String, ApplicationError> {
+    let yaml = to_string_with_config(result, &yaml_serializer_config())
+        .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
+    #[cfg(feature = "old-yaml")]
+    {
+        let yaml = old_yaml_requote(&yaml);
+        if yaml.ends_with('\n') {
+            Ok(yaml)
+        } else {
+            Ok(format!("{yaml}\n"))
+        }
+    }
+    #[cfg(not(feature = "old-yaml"))]
+    {
+        Ok(yaml)
+    }
+}
+
 pub(crate) fn emit(
     result: &SubcommandResult,
     format: OutputFormat,
@@ -140,8 +199,7 @@ pub(crate) fn emit(
         OutputFormat::Text => print!("{result}"),
         OutputFormat::Yaml => {
             println!("---");
-            let yaml = serde_yaml::to_string(result)
-                .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
+            let yaml = serialize_yaml(result)?;
             print!("{yaml}");
         }
         OutputFormat::Json => {
@@ -151,4 +209,130 @@ pub(crate) fn emit(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod yaml_structure_tests {
+    #[cfg(feature = "old-yaml")]
+    use super::old_yaml_requote;
+    use super::{SubcommandResult, serialize_yaml};
+    use crate::results::{
+        OrderedVersionMap, SelectResult, SemverComponent, ValidateResult, VersionExplanation,
+        VersionMutationResult,
+    };
+    use semver::Version;
+
+    fn parse_yaml_value(result: &SubcommandResult) -> serde_json::Value {
+        let yaml = serialize_yaml(result).unwrap();
+        let cfg = noyalib::ParserConfig::new().lossless_u64_integers(true);
+        noyalib::from_str_with_config(&yaml, &cfg).unwrap()
+    }
+
+    #[test]
+    fn validate_result_yaml_structure() {
+        let result =
+            SubcommandResult::ValidateResult(ValidateResult::validate("1.2.3".into(), false));
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("valid").and_then(|v| v.as_bool()), Some(true));
+    }
+
+    #[test]
+    fn version_mutation_result_yaml_structure() {
+        let result = SubcommandResult::VersionMutation(VersionMutationResult {
+            mutated_version: Version::parse("2.1.1").unwrap(),
+        });
+        let doc = parse_yaml_value(&result);
+        assert_eq!(
+            doc.get("mutated_version").and_then(|v| v.as_str()),
+            Some("2.1.1")
+        );
+    }
+
+    #[test]
+    fn ordered_version_map_yaml_structure() {
+        let mut versions = vec![
+            Version::parse("1.0.0").unwrap(),
+            Version::parse("2.0.0").unwrap(),
+        ];
+        let map = OrderedVersionMap::new(&mut versions, &None, false, false, false);
+        let result = SubcommandResult::OrderedVersionMap(map);
+        let doc = parse_yaml_value(&result);
+        let versions = doc
+            .get("versions")
+            .and_then(|v| v.as_object())
+            .expect("versions map");
+        assert_eq!(versions.len(), 2);
+        assert!(versions.contains_key("1.0.0"));
+        assert!(versions.contains_key("2.0.0"));
+    }
+
+    #[test]
+    fn version_explanation_yaml_structure() {
+        let version = Version::parse("1.2.3-rc.0+build.1").unwrap();
+        let result = SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("major").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(doc.get("minor").and_then(|v| v.as_u64()), Some(2));
+        assert_eq!(doc.get("patch").and_then(|v| v.as_u64()), Some(3));
+        assert_eq!(
+            doc.get("prerelease_string").and_then(|v| v.as_str()),
+            Some("rc.0")
+        );
+        assert!(doc.get("prerelease").and_then(|v| v.as_array()).is_some());
+        assert_eq!(
+            doc.get("build_metadata_string").and_then(|v| v.as_str()),
+            Some("build.1")
+        );
+        assert!(
+            doc.get("build-metadata")
+                .and_then(|v| v.as_array())
+                .is_some()
+        );
+    }
+
+    #[test]
+    fn version_explanation_yaml_preserves_u64_above_i64_max() {
+        const MAJOR: u64 = i64::MAX as u64 + 1;
+        let version = Version::parse(&format!("{MAJOR}.0.0")).unwrap();
+        let result = SubcommandResult::VersionExplanation(VersionExplanation::from(&version));
+        let yaml = serialize_yaml(&result).unwrap();
+
+        assert!(
+            yaml.contains(&format!("major: {MAJOR}")),
+            "expected plain integer scalar in YAML output, got:\n{yaml}"
+        );
+        assert!(
+            !yaml.contains(&format!("major: \"{MAJOR}\""))
+                && !yaml.contains(&format!("major: '{MAJOR}'")),
+            "large semver components must not be emitted as YAML strings:\n{yaml}"
+        );
+
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("major").and_then(|v| v.as_u64()), Some(MAJOR));
+    }
+
+    #[test]
+    fn select_result_untagged_yaml_structure() {
+        let inner = SelectResult::select("1.2.3", SemverComponent::Major, false, false).unwrap();
+        let result = SubcommandResult::SelectResult(inner);
+        let doc = parse_yaml_value(&result);
+        assert_eq!(doc.get("value").and_then(|v| v.as_str()), Some("1"));
+    }
+
+    #[cfg(feature = "old-yaml")]
+    #[test]
+    fn requote_uses_legacy_scalar_style() {
+        let result = SubcommandResult::SelectResult(
+            SelectResult::select("1.2.3", SemverComponent::Major, false, false).unwrap(),
+        );
+        assert_eq!(serialize_yaml(&result).unwrap(), "value: '1'\n");
+    }
+
+    #[cfg(feature = "old-yaml")]
+    #[test]
+    fn requote_leaves_plain_version_strings_unquoted() {
+        let yaml = "versions:\n  \"0.1.2+bm0\":\n  - \"0.1.2+bm0\"\n";
+        let expected = "versions:\n  0.1.2+bm0:\n  - 0.1.2+bm0\n";
+        assert_eq!(old_yaml_requote(yaml), expected);
+    }
 }

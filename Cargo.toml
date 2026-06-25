@@ -28,6 +28,12 @@ categories = ["command-line-utilities"]
 readme = "README.md"
 description = "A simple Semantic Versioning CLI tool for parsing, filtering, sorting and explaining"
 
+[features]
+default = ["old-yaml"]
+# Match legacy `serde_yaml` stdout cosmetics (quoting, list layout, trailing newline).
+# TODO(canardleteer): In v0.2.0, drop this from default features and remove the flag entirely.
+old-yaml = []
+
 [package.metadata.wix]
 upgrade-guid = "4B0BC255-6C49-4242-8F92-789262A65064"
 path-guid = "D28BFC08-1707-4BF8-ACB8-9A4496178C5F"
@@ -55,17 +61,20 @@ serde_json = "1.0.150"
 
 # NOTE(canardleteer): YAML serialization trade-offs:
 #
-#   - `serde_yaml` (current): stable Serde integration; only used for
-#     `serde_yaml::to_string` in main. Upstream crate is deprecated/archived
-#     and has YAML 1.1 quirks.
+#   - `serde_yaml`: deprecated/archived; pulls in `unsafe-libyaml`; YAML 1.1 quirks.
 #
-#   - `serde_yml`: active fork with a drop-in API, but over-quotes strings in
-#     output, breaking interoperability with tools like `yq`.
+#   - `serde_yml`: archived shim over `noyalib`; prefer depending on `noyalib` directly.
 #
-#   - `saphyr-rs/saphyr` (target direction): YAML 1.2 compliant, passes the
-#     YAML test suite, correctness-first. Official `saphyr-serde` is planned;
-#     migrate when Serde integration lands from saphyr-rs rather than serde_yml.
-serde_yaml = "0.9.34"
+#   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
+#     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
+#
+#   Temporary git pin: canardleteer/noyalib `feat/lossless-u64` until that MR lands,
+#   then revert to a crates.io release with `lossless-u64` enabled.
+#
+#   Default feature `old-yaml` preserves legacy `serde_yaml` stdout
+#   cosmetics (quoting, list layout, trailing newline). TODO(canardleteer): in v0.2.0,
+#   disable by default and remove the feature entirely.
+noyalib = { git = "https://github.com/canardleteer/noyalib", branch = "feat/lossless-u64", features = ["lossless-u64"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"

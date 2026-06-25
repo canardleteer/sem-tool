@@ -1,0 +1,17 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - filter-test
+    - 2.0.0
+    - ">1"
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: invalid value '>1' for '<SEMANTIC_VERSION>': unexpected character '>' while parsing major version number
+
+For more information, try '--help'.

@@ -1,0 +1,16 @@
+---
+source: tests/cli_insta_yaml_native.rs
+info:
+  program: sem-tool
+  args:
+    - filter-test
+    - ">a.b.c"
+---
+success: false
+exit_code: 2
+----- stdout -----
+
+----- stderr -----
+error: invalid value '>a.b.c' for '<FILTER>': unexpected character 'a' while parsing major version number
+
+For more information, try '--help'.
