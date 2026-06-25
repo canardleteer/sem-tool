@@ -13,7 +13,7 @@
 //! See the License for the specific language governing permissions and
 //! limitations under the License.
 //!
-//! Insta coverage for default CLI output (`serde-yaml-compatability` enabled).
+//! Insta coverage for default CLI output (`old-yaml` enabled).
 use insta_cmd::{assert_cmd_snapshot, get_cargo_bin};
 use std::process::Command;
 
