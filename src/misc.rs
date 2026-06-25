@@ -134,11 +134,11 @@ impl Termination for SubcommandResult {
 }
 
 fn yaml_serializer_config() -> SerializerConfig {
-    #[cfg(feature = "serde-yaml-compatability")]
+    #[cfg(feature = "old-yaml")]
     {
         SerializerConfig::new().compact_list_indent(true)
     }
-    #[cfg(not(feature = "serde-yaml-compatability"))]
+    #[cfg(not(feature = "old-yaml"))]
     {
         SerializerConfig::new()
     }
@@ -148,8 +148,8 @@ fn yaml_serializer_config() -> SerializerConfig {
 ///
 /// Necessary because noyalib 0.0.8 always double-quotes ambiguous scalars and does
 /// not yet honor `SerializerConfig::scalar_style`.
-#[cfg(feature = "serde-yaml-compatability")]
-fn serde_yaml_compat_requote(yaml: &str) -> String {
+#[cfg(feature = "old-yaml")]
+fn old_yaml_requote(yaml: &str) -> String {
     use regex::{Captures, Regex};
     use std::sync::LazyLock;
 
@@ -176,16 +176,16 @@ fn serde_yaml_compat_requote(yaml: &str) -> String {
 fn serialize_yaml(result: &SubcommandResult) -> Result<String, ApplicationError> {
     let yaml = to_string_with_config(result, &yaml_serializer_config())
         .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-    #[cfg(feature = "serde-yaml-compatability")]
+    #[cfg(feature = "old-yaml")]
     {
-        let yaml = serde_yaml_compat_requote(&yaml);
+        let yaml = old_yaml_requote(&yaml);
         if yaml.ends_with('\n') {
             Ok(yaml)
         } else {
             Ok(format!("{yaml}\n"))
         }
     }
-    #[cfg(not(feature = "serde-yaml-compatability"))]
+    #[cfg(not(feature = "old-yaml"))]
     {
         Ok(yaml)
     }
@@ -213,8 +213,8 @@ pub(crate) fn emit(
 
 #[cfg(test)]
 mod yaml_structure_tests {
-    #[cfg(feature = "serde-yaml-compatability")]
-    use super::serde_yaml_compat_requote;
+    #[cfg(feature = "old-yaml")]
+    use super::old_yaml_requote;
     use super::{SubcommandResult, serialize_yaml};
     use crate::results::{
         OrderedVersionMap, SelectResult, SemverComponent, ValidateResult, VersionExplanation,
@@ -319,7 +319,7 @@ mod yaml_structure_tests {
         assert_eq!(doc.get("value").and_then(|v| v.as_str()), Some("1"));
     }
 
-    #[cfg(feature = "serde-yaml-compatability")]
+    #[cfg(feature = "old-yaml")]
     #[test]
     fn requote_uses_legacy_scalar_style() {
         let result = SubcommandResult::SelectResult(
@@ -328,11 +328,11 @@ mod yaml_structure_tests {
         assert_eq!(serialize_yaml(&result).unwrap(), "value: '1'\n");
     }
 
-    #[cfg(feature = "serde-yaml-compatability")]
+    #[cfg(feature = "old-yaml")]
     #[test]
     fn requote_leaves_plain_version_strings_unquoted() {
         let yaml = "versions:\n  \"0.1.2+bm0\":\n  - \"0.1.2+bm0\"\n";
         let expected = "versions:\n  0.1.2+bm0:\n  - 0.1.2+bm0\n";
-        assert_eq!(serde_yaml_compat_requote(yaml), expected);
+        assert_eq!(old_yaml_requote(yaml), expected);
     }
 }
