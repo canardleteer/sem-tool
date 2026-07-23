@@ -16,7 +16,7 @@
 //! This is a bunch of last mile display + serialization logic.
 use clap::ValueEnum;
 use core::fmt;
-use noyalib::{SerializerConfig, to_string_with_config};
+use noyalib::to_string as to_yaml_string;
 use serde::Serialize;
 use std::process::{ExitCode, Termination};
 use thiserror::Error;
@@ -133,62 +133,8 @@ impl Termination for SubcommandResult {
     }
 }
 
-fn yaml_serializer_config() -> SerializerConfig {
-    #[cfg(feature = "old-yaml")]
-    {
-        SerializerConfig::new().compact_list_indent(true)
-    }
-    #[cfg(not(feature = "old-yaml"))]
-    {
-        SerializerConfig::new()
-    }
-}
-
-/// Re-quote noyalib `"…"` scalars to match legacy `serde_yaml` stdout cosmetics.
-///
-/// Necessary because noyalib 0.0.8 always double-quotes ambiguous scalars and does
-/// not yet honor `SerializerConfig::scalar_style`.
-#[cfg(feature = "old-yaml")]
-fn old_yaml_requote(yaml: &str) -> String {
-    use regex::{Captures, Regex};
-    use std::sync::LazyLock;
-
-    static DOUBLE_QUOTED_SCALAR: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r#""([^"\\]*(?:\\.[^"\\]*)*)""#).unwrap());
-
-    DOUBLE_QUOTED_SCALAR
-        .replace_all(yaml, |caps: &Captures| {
-            let s = &caps[1];
-            if s.chars().all(|c| c.is_ascii_digit()) {
-                return format!("'{s}'");
-            }
-            if s.chars()
-                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '-' | '_' | '+'))
-                && (s.contains('.') || s.contains('-') || s.contains('+'))
-            {
-                return s.to_string();
-            }
-            format!("'{s}'")
-        })
-        .into_owned()
-}
-
 fn serialize_yaml(result: &SubcommandResult) -> Result<String, ApplicationError> {
-    let yaml = to_string_with_config(result, &yaml_serializer_config())
-        .map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })?;
-    #[cfg(feature = "old-yaml")]
-    {
-        let yaml = old_yaml_requote(&yaml);
-        if yaml.ends_with('\n') {
-            Ok(yaml)
-        } else {
-            Ok(format!("{yaml}\n"))
-        }
-    }
-    #[cfg(not(feature = "old-yaml"))]
-    {
-        Ok(yaml)
-    }
+    to_yaml_string(result).map_err(|e| ApplicationError::OutputFormatError { err: e.to_string() })
 }
 
 pub(crate) fn emit(
@@ -213,8 +159,6 @@ pub(crate) fn emit(
 
 #[cfg(test)]
 mod yaml_structure_tests {
-    #[cfg(feature = "old-yaml")]
-    use super::old_yaml_requote;
     use super::{SubcommandResult, serialize_yaml};
     use crate::results::{
         OrderedVersionMap, SelectResult, SemverComponent, ValidateResult, VersionExplanation,
@@ -317,22 +261,5 @@ mod yaml_structure_tests {
         let result = SubcommandResult::SelectResult(inner);
         let doc = parse_yaml_value(&result);
         assert_eq!(doc.get("value").and_then(|v| v.as_str()), Some("1"));
-    }
-
-    #[cfg(feature = "old-yaml")]
-    #[test]
-    fn requote_uses_legacy_scalar_style() {
-        let result = SubcommandResult::SelectResult(
-            SelectResult::select("1.2.3", SemverComponent::Major, false, false).unwrap(),
-        );
-        assert_eq!(serialize_yaml(&result).unwrap(), "value: '1'\n");
-    }
-
-    #[cfg(feature = "old-yaml")]
-    #[test]
-    fn requote_leaves_plain_version_strings_unquoted() {
-        let yaml = "versions:\n  \"0.1.2+bm0\":\n  - \"0.1.2+bm0\"\n";
-        let expected = "versions:\n  0.1.2+bm0:\n  - 0.1.2+bm0\n";
-        assert_eq!(old_yaml_requote(yaml), expected);
     }
 }

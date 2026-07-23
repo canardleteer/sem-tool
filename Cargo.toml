@@ -14,7 +14,7 @@
 # limitations under the License.
 [package]
 name = "sem-tool"
-version = "0.1.14"
+version = "0.2.0"
 edition = "2024"
 exclude = [
     "example-data/*",
@@ -27,12 +27,6 @@ homepage = "https://github.com/canardleteer/sem-tool"
 categories = ["command-line-utilities"]
 readme = "README.md"
 description = "A simple Semantic Versioning CLI tool for parsing, filtering, sorting and explaining"
-
-[features]
-default = ["old-yaml"]
-# Match legacy `serde_yaml` stdout cosmetics (quoting, list layout, trailing newline).
-# TODO(canardleteer): In v0.2.0, drop this from default features and remove the flag entirely.
-old-yaml = []
 
 [package.metadata.wix]
 upgrade-guid = "4B0BC255-6C49-4242-8F92-789262A65064"
@@ -67,11 +61,6 @@ serde_json = "1.0.150"
 #
 #   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
 #     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
-#
-#   Default feature `old-yaml` preserves legacy `serde_yaml` stdout
-#   cosmetics (quoting, list layout, trailing newline).
-#
-#   TODO(canardleteer): in v0.2.0, disable by default and remove the feature entirely.
 noyalib = { version = "0.0.15", features = ["lossless-u64"] }
 
 [dev-dependencies]

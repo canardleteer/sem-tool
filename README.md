@@ -508,30 +508,17 @@ have it (`cargo install rumdl --version ^0.2`).
 
 ## Todo
 
-- [X] Simple `validate` command.
 - [ ] Possibly remove "text" output, or just make it really nice.
 - [ ] Additional language filter implementations
   - [ ] This is somewhat of a slippery slope.
   - [ ] Consider if we should seek to use pure regex filtering.
 - [ ] Commands that take stdin, should probably take file inputs too.
-- [ ] CLI Testing (probably) with `assert_cmd`
+- [X] CLI Testing with `assert_cmd` / `insta-cmd` / proptest
   - [X] all subcommands
-  - [ ] make these far more robust
-  - [ ] restructure or add a framework to make them more legible & composable
-  - [ ] validate all output types
+  - [X] robust per-command suites (basic cases, invalid input, props)
+  - [X] shared helpers (`tests/common`) for legible, composable cases
+  - [ ] validate all output types (JSON still thin vs default YAML)
   - [X] output snapshotting
     - [X] basic
-    - [ ] output snapshotting of all types
-    - [ ] output snapshotting with good labels
-- [X] Property testing
-  - [X] There is work on [this
-    branch](https://github.com/canardleteer/sem-tool/tree/proptest), but it
-    needs a reorg after the CLI Testing lands in a more composable form.
-  - [ ] Clean up the CLI testing to use a a more generic test builder.
-- [ ] Unit Testing
-  - [ ] Validate output
-- [X] Need status code responses options
-- [X] Potential Ambiguity
-- [X] Regex Validate
-- [X] Generate random semantic version lists for helping build tests
-- [X] Github Actions + release-plz
+    - [ ] output snapshotting of all types (today: default YAML)
+    - [X] output snapshotting with good labels
