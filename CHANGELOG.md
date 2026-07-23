@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14](https://github.com/canardleteer/sem-tool/compare/v0.1.13...v0.1.14) - 2026-07-23
+
+### Added
+
+- add default serde-yaml-compatability feature for YAML cosmetics
+
+### Fixed
+
+- rustfmt misc tests and add explain proptest regression
+
+### Other
+
+- switch to upstream noyalib
+- rename serde-yaml-compatability feature to old-yaml
+- assert explain YAML preserves u64 above i64::MAX
+- pin noyalib feat/lossless-u64 and drop u64 string workaround
+- add dual insta snapshots for compat and native YAML output
+- migrate YAML output from serde_yaml to noyalib
+- *(deps)* bump actions/cache from 5 to 6
+
 ## [0.1.13](https://github.com/canardleteer/sem-tool/compare/v0.1.12...v0.1.13) - 2026-06-22
 
 ### Added
