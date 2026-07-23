@@ -6,7 +6,7 @@
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -68,13 +68,11 @@ serde_json = "1.0.150"
 #   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
 #     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
 #
-#   Temporary git pin: canardleteer/noyalib `feat/lossless-u64` until that MR lands,
-#   then revert to a crates.io release with `lossless-u64` enabled.
-#
 #   Default feature `old-yaml` preserves legacy `serde_yaml` stdout
-#   cosmetics (quoting, list layout, trailing newline). TODO(canardleteer): in v0.2.0,
-#   disable by default and remove the feature entirely.
-noyalib = { git = "https://github.com/canardleteer/noyalib", branch = "feat/lossless-u64", features = ["lossless-u64"] }
+#   cosmetics (quoting, list layout, trailing newline).
+#
+#   TODO(canardleteer): in v0.2.0, disable by default and remove the feature entirely.
+noyalib = { version = "0.0.15", features = ["lossless-u64"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
