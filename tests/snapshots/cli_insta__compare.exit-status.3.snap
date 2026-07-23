@@ -14,5 +14,4 @@ exit_code: 122
 ---
 semantic_ordering: Greater
 lexical_ordering: Greater
-
 ----- stderr -----

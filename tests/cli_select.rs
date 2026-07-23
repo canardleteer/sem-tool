@@ -41,7 +41,7 @@ fn cli_select_basic_major() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "major")
-        .stdout("---\nvalue: '1'\n")
+        .stdout("---\nvalue: \"1\"")
         .success();
 }
 
@@ -54,7 +54,7 @@ fn cli_select_basic_minor() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "minor")
-        .stdout("---\nvalue: '2'\n")
+        .stdout("---\nvalue: \"2\"")
         .success();
 }
 
@@ -67,7 +67,7 @@ fn cli_select_basic_patch() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "patch")
-        .stdout("---\nvalue: '2'\n")
+        .stdout("---\nvalue: \"2\"")
         .success();
 }
 
@@ -80,7 +80,7 @@ fn cli_select_basic_pre_release() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "pre-release")
-        .stdout("---\nvalue: rc.0.a.1.b\n")
+        .stdout("---\nvalue: rc.0.a.1.b")
         .success();
 }
 
@@ -93,7 +93,7 @@ fn cli_select_basic_build_metadata() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "build-metadata")
-        .stdout("---\nvalue: a.0.b.1\n")
+        .stdout("---\nvalue: a.0.b.1")
         .success();
 }
 
@@ -106,7 +106,7 @@ fn cli_select_optional_missing_success() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "pre-release absent default")
-        .stdout("---\n{}\n")
+        .stdout("---\n{}")
         .success();
 }
 
@@ -133,7 +133,7 @@ fn cli_select_default_regex_large_version() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "regex large major")
-        .stdout("---\nvalue: '18446744073709551616'\n")
+        .stdout("---\nvalue: \"18446744073709551616\"")
         .success();
 }
 
@@ -147,7 +147,7 @@ fn cli_select_small_flag() {
         .assert();
     assert
         .append_context(COMMAND_SELECT, "small")
-        .stdout("---\nvalue: '1'\n")
+        .stdout("---\nvalue: \"1\"")
         .success();
 }
 

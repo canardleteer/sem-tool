@@ -12,5 +12,4 @@ exit_code: 1
 ----- stdout -----
 ---
 pass: false
-
 ----- stderr -----
