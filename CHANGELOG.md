@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/canardleteer/sem-tool/compare/v0.1.14...v0.2.0) - 2026-07-23
+
+### Changed
+
+- *(breaking)* remove `old-yaml` serde_yaml cosmetic compatibility; default YAML stdout now follows native noyalib quoting and layout
+
+### Other
+
+- drop dual native insta suite and update CLI/YAML expectations for noyalib output
+- refresh README Todo to match current test coverage
+
 ## [0.1.14](https://github.com/canardleteer/sem-tool/compare/v0.1.13...v0.1.14) - 2026-07-23
 
 ### Added
