@@ -61,7 +61,7 @@ serde_json = "1.0.150"
 #
 #   - `noyalib` (current): pure-Rust YAML 1.2 with full Serde integration and zero
 #     `unsafe` code. Pre-1.0 (`0.0.x`) — pin explicitly.
-noyalib = { version = "0.0.28", features = ["lossless-u64"] }
+noyalib = { version = "0.0.39", features = ["lossless-u64"] }
 
 [dev-dependencies]
 assert_cmd = "2.2.2"
