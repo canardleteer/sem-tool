@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- YAML output follows noyalib 0.0.44 quoting: digit-leading strings such as `1.2.3` are now plain scalars when they still read back as strings
+
+### Other
+
+- bump crate dependencies, including noyalib 0.0.28 → 0.0.44
+
 ## [0.2.0](https://github.com/canardleteer/sem-tool/compare/v0.1.14...v0.2.0) - 2026-07-23
 
 ### Changed
