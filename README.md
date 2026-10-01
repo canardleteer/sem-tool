@@ -3,7 +3,7 @@
 > **A simple tool for working with [Semantic Versioning](https://semver.org/) on the command line.**
 
 [![Crates.io](https://img.shields.io/crates/v/sem-tool?style=flat-square)](https://crates.io/crates/sem-tool)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE-APACHE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/canardleteer/sem-tool/testing.yml?branch=main&style=flat-square)](https://github.com/canardleteer/sem-tool/actions/workflows/testing.yml?query=branch%3Amain)
 
 Semantic Versioning seems simple, but in many cases, it's not implemented
