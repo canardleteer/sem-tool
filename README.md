@@ -65,6 +65,11 @@ Currently, the following output types are: `yaml`, `text`, `json`.
 
 I favor the `yaml` output, and have made that the default.
 
+For the 0.2.x series, YAML keeps version strings quoted as in 0.2.0:
+`mutated_version: "1.2.3"`. Build with the `plain-yaml-scalars` Cargo feature
+to use noyalib's newer spelling, `mutated_version: 1.2.3`. Both parse as YAML
+strings. The plain-scalar spelling is planned to become the default in 0.3.0.
+
 Exit Status is available either by default in obvious cases, or by flag in less
 obvious cases.
 

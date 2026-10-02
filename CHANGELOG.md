@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- YAML output follows noyalib 0.0.44 quoting: digit-leading strings such as `1.2.3` are now plain scalars when they still read back as strings
+- restore 0.2.0 YAML quoting for digit-leading version strings by default; add the `plain-yaml-scalars` Cargo feature to opt into noyalib 0.0.51's plain-scalar output ahead of the planned 0.3.0 default switch
 
 ### Other
 
-- bump crate dependencies, including noyalib 0.0.28 → 0.0.44
+- bump crate dependencies, including noyalib 0.0.28 → 0.0.51 for the opt-in YAML emitter
 
 ## [0.2.0](https://github.com/canardleteer/sem-tool/compare/v0.1.14...v0.2.0) - 2026-07-23
 

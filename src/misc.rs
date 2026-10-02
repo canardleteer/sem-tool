@@ -16,7 +16,10 @@
 //! This is a bunch of last mile display + serialization logic.
 use clap::ValueEnum;
 use core::fmt;
+#[cfg(feature = "plain-yaml-scalars")]
 use noyalib::to_string as to_yaml_string;
+#[cfg(not(feature = "plain-yaml-scalars"))]
+use noyalib_legacy::to_string as to_yaml_string;
 use serde::Serialize;
 use std::process::{ExitCode, Termination};
 use thiserror::Error;
@@ -189,6 +192,18 @@ mod yaml_structure_tests {
         assert_eq!(
             doc.get("mutated_version").and_then(|v| v.as_str()),
             Some("2.1.1")
+        );
+        #[cfg(feature = "plain-yaml-scalars")]
+        assert!(
+            serialize_yaml(&result)
+                .unwrap()
+                .contains("mutated_version: 2.1.1")
+        );
+        #[cfg(not(feature = "plain-yaml-scalars"))]
+        assert!(
+            serialize_yaml(&result)
+                .unwrap()
+                .contains("mutated_version: \"2.1.1\"")
         );
     }
 
