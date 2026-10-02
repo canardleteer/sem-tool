@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1](https://github.com/canardleteer/sem-tool/compare/v0.2.0...v0.2.1) - 2026-10-02
+
+### Fixed
+
+- preserve 0.2 YAML quoting by default
+
+### Other
+
+- fix license badge link
+- update noyalib to 0.0.51
+- update compatible Cargo dependencies
+- bump dependencies including noyalib 0.0.44
+- deps update
+- update deps
+- remove dangling ci commented out code
+- add missing 0.2.0 changelog entry
+
 ### Changed
 
 - restore 0.2.0 YAML quoting for digit-leading version strings by default; add the `plain-yaml-scalars` Cargo feature to opt into noyalib 0.0.51's plain-scalar output ahead of the planned 0.3.0 default switch
